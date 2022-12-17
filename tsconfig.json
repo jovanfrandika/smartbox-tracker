@@ -1,0 +1,21 @@
+// prettier-ignore
+{
+  "compilerOptions": {
+    "outDir": "build",
+    "rootDir": ".",
+    "sourceMap": false,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "module": "es2015",
+    "target": "es6",
+    "jsx": "react-native",
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": ["node_modules/@types", "./src/types"],
+    "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
+  }
+}
