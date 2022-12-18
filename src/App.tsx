@@ -1,4 +1,3 @@
-import React from 'react';
 import { MD3LightTheme as DefaultTheme, Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -13,14 +12,12 @@ const theme = {
   },
 };
 
-const App = () => {
-  return (
-    <PaperProvider theme={theme}>
-      <SafeAreaProvider>
-        <Screens />
-      </SafeAreaProvider>
-    </PaperProvider>
-  );
-}
+const App = () => (
+  <PaperProvider theme={theme}>
+    <SafeAreaProvider>
+      <Screens />
+    </SafeAreaProvider>
+  </PaperProvider>
+);
 
 export default App;

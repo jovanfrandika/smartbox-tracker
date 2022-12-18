@@ -19,7 +19,7 @@ const keyboardVerticalOffset = 64;
 
 const initialBrokerUrl = 'ws://127.0.0.1:9001';
 
-const version = appPackage.version;
+const { version } = appPackage;
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -42,11 +42,13 @@ const Home = () => {
             Smartbox Demo App
           </Text>
           <Text style={styles.textCenter}>
-            Version {version}
+            Version
+            {' '}
+            {version}
           </Text>
         </View>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={keyboardVerticalOffset}
         >
           <TextInput

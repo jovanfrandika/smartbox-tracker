@@ -18,9 +18,9 @@ export const publish = (msg: string, callback: () => void) => {
       if (err) {
         callback();
       }
-    })
+    });
   }
-}
+};
 
 export const connect = (
   brokerUrl: string,
@@ -48,7 +48,7 @@ export const connect = (
     client.on('connect', () => {
       client?.subscribe(subscribeDataTopic, (err) => {
         if (err) {
-          console.error(err)
+          console.error(err);
           onDisconnected();
         } else {
           onConnected();
@@ -56,7 +56,7 @@ export const connect = (
       });
       client?.subscribe(subscribeStatusTopic, (err) => {
         if (err) {
-          console.error(err)
+          console.error(err);
           onDisconnected();
         } else {
           onConnected();
@@ -67,7 +67,7 @@ export const connect = (
       onDisconnected();
     });
     client.on('message', (topic, message) => {
-      console.log(topic, message.toString())
+      console.log(topic, message.toString());
       if (topic === subscribeDataTopic) {
         onReceiveDataMessage(message);
       } else if (topic === subscribeStatusTopic) {
@@ -75,11 +75,11 @@ export const connect = (
       }
     });
   }
-}
+};
 
 export const disconnect = () => {
   if (client) {
     client.end();
     client = undefined;
   }
-}
+};

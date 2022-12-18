@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const height = Dimensions.get('screen').height * 3 / 7;
+const height = (Dimensions.get('screen').height * 3) / 7;
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -17,10 +17,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerConnectedStatus: {
-    color: '#6fc48f'
+    color: '#6fc48f',
   },
   headerDisconnectedStatus: {
-    color: '#ff4c4c'
+    color: '#ff4c4c',
   },
   map: {
     height,
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   row: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-evenly'
+    justifyContent: 'space-evenly',
   },
   full: {
     flex: 1,

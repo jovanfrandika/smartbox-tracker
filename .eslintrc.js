@@ -25,8 +25,9 @@ module.exports = {
     project: ['./tsconfig.json'],
     tsconfigRootDir: './',
   },
-  plugins: ['react', 'import', '@typescript-eslint', 'jest'],
+  plugins: ['react', 'import', '@typescript-eslint'],
   rules: {
+    'react/react-in-jsx-scope': 'off',
     'react/jsx-filename-extension': [
       1,
       {
@@ -52,6 +53,8 @@ module.exports = {
     ],
     'no-undef': 'off',
     'no-unused-vars': 'off',
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": ["error"]
   },
   settings: {
     'import/parsers': {
