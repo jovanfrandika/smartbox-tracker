@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useCallback } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text, TextInput } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -7,72 +7,34 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../types';
 
+import { useAppDispatch, useAppSelector } from '../../stores';
+
 import { screens } from '../../constants';
 
 import styles from './styles';
 
-import * as appPackage from '../../../package.json';
-
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-
-const keyboardVerticalOffset = 64;
-
-const initialBrokerUrl = 'ws://127.0.0.1:9001';
-
-const { version } = appPackage;
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
-  const [deviceName, setDeviceName] = useState<string>('');
-  const [brokerUrl, setBrokerUrl] = useState<string>(initialBrokerUrl);
+  const dispatch = useAppDispatch();
 
-  const onPress = useCallback(() => {
-    navigation.navigate(screens.device, { deviceName, brokerUrl });
-  }, [deviceName, brokerUrl, navigation]);
+  const user = useAppSelector((state) => state.auth.user);
+
+  const onPressGoToDetail = useCallback((parcelId: string) => {
+    navigation.navigate(screens.parcel, { parcelId });
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Text variant="titleMedium" style={styles.headerTitle}>
+          {user?.name}
+        </Text>
+      </View>
       <View style={styles.container}>
-        <View>
-          <Text
-            variant="displayLarge"
-            style={styles.textCenter}
-          >
-            Smartbox Demo App
-          </Text>
-          <Text style={styles.textCenter}>
-            Version
-            {' '}
-            {version}
-          </Text>
-        </View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={keyboardVerticalOffset}
-        >
-          <TextInput
-            label="Broker Url"
-            mode="outlined"
-            value={brokerUrl}
-            onChangeText={(newVal: string) => setBrokerUrl(newVal)}
-            style={styles.spaceBottom}
-          />
-          <TextInput
-            label="Device Name"
-            mode="outlined"
-            value={deviceName}
-            onChangeText={(newVal: string) => setDeviceName(newVal)}
-            style={styles.spaceBottom}
-          />
-          <Button
-            mode="contained"
-            onPress={onPress}
-            disabled={deviceName.length === 0 && brokerUrl.length === 0}
-          >
-            Try Connect
-          </Button>
-        </KeyboardAvoidingView>
+        {}
       </View>
     </SafeAreaView>
   );
