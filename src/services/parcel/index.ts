@@ -5,19 +5,21 @@ import axiosBaseQuery from '../../utils/axiosBaseQuery';
 
 import { getAccessToken } from '../../utils/token';
 
-import { Parcel } from '../../types';
+import { Parcel, RawParcel } from '../../types';
 
 type GetHistoriesArgs = {};
 
 type GetHistoriesResponse = {
-  parcels: Record<string, Parcel>;
+  histories: Record<string, Parcel>;
 };
 
-type CreateOneArgs = {};
+type CreateOneArgs = {
+  senderId: string;
+};
 
 type CreateOneResponse = {};
 
-type UpdateOneArgs = {};
+type UpdateOneArgs = RawParcel;
 
 type UpdateOneResponse = {};
 
@@ -25,13 +27,15 @@ type GetPhotoSignedUrlArgs = {
   id: string,
 };
 
-type GetPhotoSignedUrlResponse = {};
+type GetPhotoSignedUrlResponse = {
+  url: string,
+};
 
 type CheckPhotoArgs = {
   id: string,
 };
 
-type CheckPhotoResponse = {}
+type CheckPhotoResponse = {};
 
 type SendParcelCodeToReceiverArgs = {
   id: string,
@@ -42,13 +46,15 @@ type SendParcelCodeToReceiverResponse = {}
 type VerifyParcelCodeArgs = {
   id: string,
   code: string,
-}
+};
 
 type VerifyParcelCodeResponse = {}
 
 type UpdateProgressArgs = {}
 
-type UpdateProgressResponse = {}
+type UpdateProgressResponse = {
+  parcel: Parcel,
+};
 
 type OpenDoorArgs = {}
 
@@ -58,7 +64,7 @@ export const parcelApi = createApi({
   reducerPath: 'parcelApi',
   tagTypes: ['Parcel'],
   baseQuery: axiosBaseQuery({
-    baseUrl: '/parcel',
+    baseUrl: 'https://smartbox.frandika.com/parcel',
     prepareHeaders: (headers: any = {}) => {
       const newHeaders: AxiosRequestHeaders = { ...headers };
 
@@ -74,7 +80,7 @@ export const parcelApi = createApi({
         url: '/',
       }),
       transformResponse: (res) => ({
-        parcels: res.parcels.reduce((acc: Record<string, Parcel>, cur: any) => ({
+        histories: res.histories.reduce((acc: Record<string, Parcel>, cur: any) => ({
           ...acc,
           [cur.id]: {
             id: cur.id,
@@ -90,14 +96,19 @@ export const parcelApi = createApi({
             device: cur.device,
             status: cur.status,
           },
-        })),
+        }), {}),
       }),
+      providesTags: () => (['Parcel']),
     }),
     createOne: builder.mutation<CreateOneResponse, CreateOneArgs>({
-      query: () => ({
+      query: ({ senderId }) => ({
         url: '/',
         method: 'POST',
+        data: {
+          sender_id: senderId,
+        },
       }),
+      invalidatesTags: () => (['Parcel']),
     }),
     updateOne: builder.mutation<UpdateOneResponse, UpdateOneArgs>({
       query: (parcel) => ({
@@ -105,6 +116,7 @@ export const parcelApi = createApi({
         method: 'PUT',
         data: parcel,
       }),
+      invalidatesTags: () => (['Parcel']),
     }),
     getPhotoSignedUrl: builder.mutation<GetPhotoSignedUrlResponse, GetPhotoSignedUrlArgs>({
       query: ({ id }) => ({
@@ -123,6 +135,7 @@ export const parcelApi = createApi({
           id,
         },
       }),
+      invalidatesTags: () => (['Parcel']),
     }),
     sendParcelCodeToReceiver: builder.mutation<
       SendParcelCodeToReceiverResponse,
@@ -145,12 +158,30 @@ export const parcelApi = createApi({
           code,
         },
       }),
+      invalidatesTags: () => (['Parcel']),
     }),
     updateProgress: builder.mutation<UpdateProgressResponse, UpdateProgressArgs>({
       query: () => ({
         url: '/progress',
         method: 'POST',
       }),
+      transformResponse: (res: any) => ({
+        parcel: {
+          id: res.parcel.id,
+          name: res.parcel.name,
+          description: res.parcel.description,
+          photoUri: res.parcel.photo_uri,
+          isPhotoValid: res.parcel.is_photo_valid,
+          start: res.parcel.start,
+          end: res.parcel.end,
+          receiver: res.parcel.receiver,
+          sender: res.parcel.sender,
+          courier: res.parcel.courier,
+          device: res.parcel.device,
+          status: res.parcel.status,
+        },
+      }),
+      invalidatesTags: () => (['Parcel']),
     }),
     openDoor: builder.mutation<OpenDoorResponse, OpenDoorArgs>({
       query: () => ({

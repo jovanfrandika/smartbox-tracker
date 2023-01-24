@@ -5,7 +5,7 @@ import { Button, Text, TextInput } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../types';
+import { RootStackParamList, UserRoleEnum } from '../../types';
 
 import { useAppDispatch } from '../../stores';
 
@@ -16,7 +16,7 @@ import styles from './styles';
 import { setIsLogin } from '../../stores/auth';
 
 import { setAccessToken, setRefreshToken } from '../../utils/token';
-import { userRole } from '../../constants';
+import { userRoleEnumToString } from '../../constants';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -30,7 +30,7 @@ const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(userRole.customer);
+  const [role, setRole] = useState<UserRoleEnum>(UserRoleEnum.Customer);
 
   const dispatch = useAppDispatch();
 
@@ -90,26 +90,35 @@ const Register = () => {
             onChangeText={(newVal: string) => setPassword(newVal)}
             style={styles.spaceBottom}
           />
+          <Text style={styles.spaceBottom}>
+            Account Role
+          </Text>
           <Button
-            mode={role === userRole.customer ? 'contained' : 'outlined'}
+            mode={role === UserRoleEnum.Customer ? 'contained' : 'outlined'}
             onPress={() => {
-              setRole(userRole.customer);
+              setRole(UserRoleEnum.Customer);
             }}
+            style={styles.spaceBottom}
           >
-            Customer
+            {userRoleEnumToString(UserRoleEnum.Customer)}
           </Button>
           <Button
-            mode={role === userRole.courier ? 'contained' : 'outlined'}
+            mode={role === UserRoleEnum.Courier ? 'contained' : 'outlined'}
             onPress={() => {
-              setRole(userRole.courier);
+              setRole(UserRoleEnum.Courier);
             }}
+            style={styles.spaceBottom}
           >
-            Courier
+            {userRoleEnumToString(UserRoleEnum.Courier)}
           </Button>
+          <View style={styles.spaceBottom} />
+          <View style={styles.spaceBottom} />
+          <View style={styles.spaceBottom} />
           <Button
             mode="contained"
             onPress={onPress}
             disabled={(name.length < 3 && email.length < 1 && password.length < 6) || isLoading}
+            style={styles.spaceBottom}
           >
             Register
           </Button>

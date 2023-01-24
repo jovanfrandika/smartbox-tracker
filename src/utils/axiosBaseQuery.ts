@@ -48,7 +48,7 @@ const axiosBaseQuery = ({ baseUrl, prepareHeaders, ...rest }: AxiosCustomRequest
 }: any) => {
   try {
     const result: AxiosResponse = await axios({
-      url: config.API_URL + baseUrl + url,
+      url: baseUrl + url,
       method,
       data,
       headers: { ...prepareHeaders(), ...headers },

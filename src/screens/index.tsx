@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Text } from 'react-native-paper';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
+import axios from 'axios';
 
 import HomeScreen from './Home';
 import ParcelScreen from './Parcel';
@@ -10,7 +11,7 @@ import RegisterScreen from './Register';
 
 import { screens } from '../constants';
 
-import { stores, useAppSelector } from '../stores';
+import { useAppSelector } from '../stores';
 import { useLazyMeQuery } from '../services/auth';
 
 import type { RootStackParamList } from '../types';
@@ -25,19 +26,14 @@ const Screens = () => {
   const isLogin = useAppSelector((state) => state.auth.isLogin);
 
   useEffect(() => {
-    const doInitToken = async () => {
-      await initToken();
-      setHasInitToken(true);
-    };
-
-    doInitToken();
-  }, []);
-
-  useEffect(() => {
-    if (hasInitToken && isLogin) {
-      triggerMe({});
+    if (isLogin) {
+      initToken().then(async () => {
+        await triggerMe({});
+        setHasInitToken(true);
+      });
     }
-  }, [hasInitToken, isLogin]);
+    (axios.get('https://smartbox.frandika.com/ping'));
+  }, [isLogin]);
 
   if (isLoading) {
     return <Text>Loading...</Text>;
@@ -50,7 +46,7 @@ const Screens = () => {
           headerShown: false,
         }}
       >
-        {stores.getState().auth.isLogin ? (
+        {isLogin && hasInitToken ? (
           <>
             <Stack.Screen name={screens.home} component={HomeScreen} />
             <Stack.Screen name={screens.parcel} component={ParcelScreen} />

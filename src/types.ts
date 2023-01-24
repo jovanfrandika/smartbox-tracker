@@ -3,11 +3,22 @@ export type Coordinate = {
   lng: number;
 };
 
+export enum UserRoleEnum {
+  Customer = 1,
+  Courier = 2,
+}
+
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: number;
+  role: UserRoleEnum;
+};
+
+export type Friend = {
+  friendUserId: string;
+  name: string;
+  email: string;
 };
 
 export type Friendship = {
@@ -55,12 +66,27 @@ export enum ParcelStatusEnum {
   Done = 5,
 }
 
+export type RawParcel = {
+  id: string;
+  name: string;
+  description: string;
+  photoUri: string;
+  isPhotoValid: boolean;
+  start: CoordinateTempHumid;
+  end: CoordinateTempHumid;
+  receiverId: string;
+  senderId: string;
+  courierId: string;
+  deviceId: string;
+  status: ParcelStatusEnum;
+};
+
 export type Parcel = {
   id: string;
   name: string;
   description: string;
   photoUri: string;
-  isPhotoValid: string;
+  isPhotoValid: boolean;
   start: CoordinateTempHumid | null;
   end: CoordinateTempHumid | null;
   receiver: User | null;
@@ -86,7 +112,5 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
-  Parcel: {
-    parcelId: string,
-  };
+  Parcel: Parcel;
 };

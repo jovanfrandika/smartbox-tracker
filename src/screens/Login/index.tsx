@@ -33,14 +33,16 @@ const Login = () => {
   const dispatch = useAppDispatch();
 
   const onPress = useCallback(async () => {
+    console.log('login');
     const res = await loginTrigger({ email, password });
-
+    console.log('login done');
     if ('error' in res) {
+      console.log('login res', res);
       return;
     }
 
-    setAccessToken(res.data.accessToken);
-    setRefreshToken(res.data.refreshToken);
+    await setAccessToken(res.data.accessToken);
+    await setRefreshToken(res.data.refreshToken);
     dispatch(setIsLogin({ isLogin: true }));
   }, [email, password, navigation]);
 

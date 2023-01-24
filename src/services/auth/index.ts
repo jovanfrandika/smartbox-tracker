@@ -39,7 +39,7 @@ export const authApi = createApi({
   reducerPath: 'authApi',
   tagTypes: ['User'],
   baseQuery: axiosBaseQuery({
-    baseUrl: '/user',
+    baseUrl: 'https://smartbox.frandika.com/user',
     prepareHeaders: (headers: any = {}) => {
       const newHeaders: AxiosRequestHeaders = { ...headers };
 

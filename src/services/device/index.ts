@@ -1,4 +1,4 @@
-import { AxiosRequestHeaders } from 'axios';
+import { AxiosRequestHeaders, responseEncoding } from 'axios';
 import { createApi } from '@reduxjs/toolkit/query/react';
 
 import axiosBaseQuery from '../../utils/axiosBaseQuery';
@@ -17,7 +17,7 @@ export const deviceApi = createApi({
   reducerPath: 'deviceApi',
   tagTypes: ['Device'],
   baseQuery: axiosBaseQuery({
-    baseUrl: '/device',
+    baseUrl: 'https://smartbox.frandika.com/device',
     prepareHeaders: (headers: any = {}) => {
       const newHeaders: AxiosRequestHeaders = { ...headers };
 
@@ -30,7 +30,13 @@ export const deviceApi = createApi({
   endpoints: (builder) => ({
     getOneByName: builder.query<GetOneByNameResponse, GetOneByNameArgs>({
       query: ({ name }) => ({
-        url: `/${name}`,
+        url: `/name/${name}`,
+      }),
+      transformResponse: (res: any) => ({
+        id: res.id,
+        name: res.name,
+        status: res.status,
+        logInterval: res.interval,
       }),
     }),
   }),

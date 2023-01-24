@@ -5,12 +5,12 @@ import axiosBaseQuery from '../../utils/axiosBaseQuery';
 
 import { getAccessToken } from '../../utils/token';
 
-import { User } from '../../types';
+import { Friend } from '../../types';
 
 type GetAllArgs = {};
 
 type GetAllResponse = {
-  friends: User[],
+  friends: Friend[],
 };
 
 type CreateOneArgs = {
@@ -23,7 +23,7 @@ export const friendshipApi = createApi({
   reducerPath: 'friendshipApi',
   tagTypes: ['Friendship'],
   baseQuery: axiosBaseQuery({
-    baseUrl: '/friendship',
+    baseUrl: 'https://smartbox.frandika.com/friendship',
     prepareHeaders: (headers: any = {}) => {
       const newHeaders: AxiosRequestHeaders = { ...headers };
 
@@ -37,6 +37,13 @@ export const friendshipApi = createApi({
     getAll: builder.query<GetAllResponse, GetAllArgs>({
       query: () => ({
         url: '/',
+      }),
+      transformResponse: (res: any) => ({
+        friends: [...res.friends.map((friend: any) => ({
+          friendUserId: friend.friend_user_id,
+          name: friend.name,
+          email: friend.email,
+        }))],
       }),
     }),
     createOne: builder.mutation<CreateOneResponse, CreateOneArgs>({

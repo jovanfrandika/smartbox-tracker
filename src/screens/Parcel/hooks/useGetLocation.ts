@@ -33,7 +33,7 @@ const getLocationPermission = async () => {
 };
 
 const useGetLocation = () => {
-  const [userLocation, setUserLocation] = useState<Coordinate>();
+  const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
 
   const geoWatcherRef = useRef<number>();
