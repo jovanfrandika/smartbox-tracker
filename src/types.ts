@@ -1,3 +1,5 @@
+export type Maybe<T> = T | null;
+
 export type Coordinate = {
   lat: number;
   lng: number;
@@ -40,40 +42,41 @@ export enum DeviceStatusEnum {
 
 export type DeviceStatus = {
   status: DeviceStatusEnum;
-  logInterval: number | null;
+  logInterval: number;
 };
 
-export type DeviceCoordinate = {
-  lat: number;
-  lng: number;
-  speed: number;
-  satellites: number;
-};
-
-export type CoordinateTempHumid = {
-  lat: number;
-  long: number;
-  temp: number;
-  humid: number;
-};
+export type Threshold = {
+  low: number;
+  high: number;
+}
 
 export enum ParcelStatusEnum {
-  Draft = 0,
-  WaitingForCourier = 1,
-  PickUp = 2,
-  OnGoing = 3,
-  Arrived = 4,
-  Done = 5,
+  Draft = 1,
+  WaitingForCourier = 2,
+  PickUp = 3,
+  OnGoing = 4,
+  Arrived = 5,
+  Done = 6,
+}
+
+export type RawPhoto = {
+  updatedAt: string;
+}
+
+export type Photo = RawPhoto & {
+  uri: string;
 }
 
 export type RawParcel = {
   id: string;
   name: string;
   description: string;
-  photoUri: string;
-  isPhotoValid: boolean;
-  start: CoordinateTempHumid;
-  end: CoordinateTempHumid;
+  pickUpCoor: Maybe<Coordinate>;
+  arrivedCoor: Maybe<Coordinate>;
+  pickUpPhoto: Maybe<RawPhoto>;
+  arrivedPhoto: Maybe<RawPhoto>;
+  tempThr: Maybe<Threshold>;
+  hmdThr: Maybe<Threshold>;
   receiverId: string;
   senderId: string;
   courierId: string;
@@ -85,32 +88,36 @@ export type Parcel = {
   id: string;
   name: string;
   description: string;
-  photoUri: string;
-  isPhotoValid: boolean;
-  start: CoordinateTempHumid | null;
-  end: CoordinateTempHumid | null;
-  receiver: User | null;
-  sender: User | null;
-  courier: User | null;
-  device: Device | null;
+  pickUpCoor: Maybe<Coordinate>;
+  arrivedCoor: Maybe<Coordinate>;
+  pickUpPhoto: Maybe<Photo>;
+  arrivedPhoto: Maybe<Photo>;
+  tempThr: Maybe<Threshold>;
+  hmdThr: Maybe<Threshold>;
+  receiver: Maybe<User>;
+  sender: Maybe<User>;
+  courier: Maybe<User>;
+  device: Maybe<Device>;
   status: ParcelStatusEnum;
 };
 
 export type ParcelTravel = {
   id: string;
   parcelId: string;
-  coordinate: DeviceCoordinate;
-  temp: number | null;
-  humid: number | null;
-  isDoorOpen: number;
-  signal: number;
-  gpsTimestamp: string;
-  timestamp: string;
+  coor: Coordinate;
+  temp: number;
+  hmd: number;
+  doorStatus: number;
+  sgnl: number;
+  spd: number;
+  stls: number;
+  gpsTs: string;
+  ts: string;
 };
 
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
-  Parcel: Parcel;
+  Parcel: { parcelId: string };
 };

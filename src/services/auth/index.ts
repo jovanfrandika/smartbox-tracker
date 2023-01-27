@@ -13,6 +13,14 @@ type MeArgs = {};
 
 type MeResponse = User;
 
+type SearchArgs = {
+  email: string;
+};
+
+type SearchResponse = {
+  users: User[];
+};
+
 type LoginArgs = {
   email: string;
   password: string;
@@ -72,6 +80,14 @@ export const authApi = createApi({
         }
       },
     }),
+    search: builder.query<SearchResponse, SearchArgs>({
+      query: () => ({
+        url: '/search',
+        headers: {
+          Authorization: `Bearer ${getAccessToken()}`,
+        },
+      }),
+    }),
     login: builder.mutation<LoginResponse, LoginArgs>({
       query: ({ email, password }) => ({
         url: '/login',
@@ -109,6 +125,7 @@ export const authApi = createApi({
 
 export const {
   useLazyMeQuery,
+  useSearchQuery,
   useLoginMutation,
   useRegisterMutation,
 } = authApi;

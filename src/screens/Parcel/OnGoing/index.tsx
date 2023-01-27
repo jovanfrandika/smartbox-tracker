@@ -1,25 +1,28 @@
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
-import { ScrollView } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import {
   Button, Snackbar, Text, TextInput,
 } from 'react-native-paper';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Circle, Marker } from 'react-native-maps';
 
 import { Coordinate, Parcel, ParcelStatusEnum } from '../../../types';
 import { useAppSelector } from '../../../stores';
-import { useSendParcelCodeToReceiverMutation, useVerifyParcelCodeMutation } from '../../../services/parcel';
+import { useSendParcelCodeMutation, useVerifyParcelCodeMutation } from '../../../services/parcel';
 import styles from './styles';
 
-import useGetLocation from '../hooks/useGetLocation';
-import useCountdown from '../hooks/useCountdown';
+import useGetLocation from '../../../hooks/useGetLocation';
+import useCountdown from '../../../hooks/useCountdown';
 import { useGetAllQuery } from '../../../services/parcelTravel';
 import { getCrowInMeters } from '../utils';
+import { statusColor } from '../../../constants';
+import ParcelInfo from '../components/ParcelInfo';
 
 type Props = {
   parcel: Parcel,
-  setParcel: React.Dispatch<React.SetStateAction<Parcel>>;
+  isLoading: boolean,
+  refetch: () => Promise<any>;
 };
 
 const initialError = '';
@@ -28,14 +31,23 @@ const destRadius = 150;
 const countdown = 60;
 const countdownInterval = 1000;
 
-const OnGoing = ({ parcel, setParcel }: Props) => {
+const OnGoing = ({
+  parcel,
+  isLoading: isGetParcelLoading,
+  refetch,
+}: Props) => {
   const user = useAppSelector((state) => state.auth.user);
 
   const [code, setCode] = useState('');
   const [error, setError] = useState(initialError);
   const { userLocation } = useGetLocation();
 
-  const { data: parcelTravelData } = useGetAllQuery({}, {
+  const {
+    data: parcelTravelData,
+    isLoading: isGetParcelDataLoading,
+  } = useGetAllQuery({
+    parcelId: parcel.id,
+  }, {
     pollingInterval,
   });
 
@@ -47,61 +59,65 @@ const OnGoing = ({ parcel, setParcel }: Props) => {
   const [
     triggerSendCode,
     { isLoading: isSendCodeLoading, isError: isSendCodeError },
-  ] = useSendParcelCodeToReceiverMutation({});
+  ] = useSendParcelCodeMutation({});
 
   const [
     triggerVerifyCode,
     { isLoading: isVerifyCodeLoading, isError: isVerifyCodeError },
   ] = useVerifyParcelCodeMutation({});
 
-  const parcelTrails = useMemo(() => parcelTravelData?.parcelTravels.map((deviceDatum, idx) => (
-    deviceDatum.coordinate ? (
-      <Marker
-        key={`${idx + 1}-${deviceDatum.coordinate.lat}-${deviceDatum.coordinate.lng}`}
-        title={`${idx + 1}`}
-        coordinate={{ latitude: deviceDatum.coordinate.lat, longitude: deviceDatum.coordinate.lng }}
-      />
-    ) : null
-  )), [parcelTravelData]);
+  const mapRef = useRef<MapView | null>(null);
+
+  const parcelTrails = useMemo(() => (
+    parcelTravelData?.parcelTravels && parcelTravelData?.parcelTravels.map((deviceDatum, idx) => (
+      deviceDatum.coor ? (
+        <Marker
+          key={`${idx + 1}-${deviceDatum.coor.lat}-${deviceDatum.coor.lng}`}
+          title={`${idx + 1}`}
+          pinColor={statusColor[ParcelStatusEnum.OnGoing]}
+          coordinate={{ latitude: deviceDatum.coor.lat, longitude: deviceDatum.coor.lng }}
+        />
+      ) : null
+    ))), [parcelTravelData]);
 
   const hasReachEnd = useMemo(() => {
     if (!parcelTravelData || parcelTravelData?.parcelTravels.length === 0) {
       return false;
     }
     const lastTrail = parcelTravelData.parcelTravels[parcelTravelData.parcelTravels.length - 1];
-    if (!lastTrail.coordinate) {
+    if (!lastTrail.coor) {
       return false;
     }
     const lastTrailLocation: Coordinate = {
-      lat: lastTrail.coordinate.lat,
-      lng: lastTrail.coordinate.lng,
+      lat: lastTrail.coor.lat,
+      lng: lastTrail.coor.lng,
     };
     const distance = getCrowInMeters(
       lastTrailLocation,
       {
-        lat: parcel.end!.lat,
-        lng: parcel.end!.long,
+        lat: parcel.arrivedCoor!.lat,
+        lng: parcel.arrivedCoor!.lng,
       },
     ) * 1000;
     return distance <= destRadius;
   }, [parcelTravelData]);
 
-  const onPressSendCode = useCallback(() => {
-    triggerSendCode({ id: parcel.id });
-    start();
+  const onPressSendCode = useCallback(async () => {
+    const res = await triggerSendCode({ id: parcel.id, toUserId: parcel.receiver!.id });
+    if (!('error' in res)) {
+      start();
+    }
   }, []);
 
   const onPressVerifyCode = useCallback(async () => {
     const res = await triggerVerifyCode({ id: parcel.id, code });
     if (!('error' in res)) {
-      setParcel((prevData) => ({
-        ...prevData,
-        status: ParcelStatusEnum.Arrived,
-      }));
+      refetch();
     }
   }, [code]);
 
-  const isLoading = isSendCodeLoading || isVerifyCodeLoading;
+  const isLoading = isSendCodeLoading
+    || isVerifyCodeLoading || isGetParcelLoading || isGetParcelDataLoading;
 
   useEffect(() => {
     if (isSendCodeError || isVerifyCodeError) {
@@ -114,6 +130,14 @@ const OnGoing = ({ parcel, setParcel }: Props) => {
       contentContainerStyle={styles.container}
       stickyHeaderIndices={[0]}
       invertStickyHeaders
+      refreshControl={(
+        <RefreshControl
+          refreshing={isGetParcelLoading || isGetParcelDataLoading}
+          onRefresh={() => {
+            refetch();
+          }}
+        />
+      )}
     >
       <Snackbar
         visible={!!error}
@@ -121,10 +145,20 @@ const OnGoing = ({ parcel, setParcel }: Props) => {
       >
         {error}
       </Snackbar>
-      <Text>
-        {parcel.name}
-      </Text>
-      <MapView>
+      <MapView
+        ref={(ref) => {
+          mapRef.current = ref as MapView;
+        }}
+        style={[styles.map, styles.spaceBottom]}
+        onMapReady={() => {
+          mapRef.current?.animateToRegion({
+            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.0121,
+          });
+        }}
+      >
         {userLocation !== null ? (
           <Marker
             title="Your location"
@@ -134,36 +168,63 @@ const OnGoing = ({ parcel, setParcel }: Props) => {
             }}
           />
         ) : null}
+        <Circle
+          center={{ latitude: parcel.arrivedCoor!.lat, longitude: parcel.arrivedCoor!.lng }}
+          radius={destRadius}
+          strokeWidth={2}
+          strokeColor={statusColor[ParcelStatusEnum.Arrived]}
+          fillColor={statusColor[ParcelStatusEnum.Arrived]}
+          style={styles.mapCircle}
+        />
         <Marker
           title="Pick Up"
+          pinColor={statusColor[ParcelStatusEnum.PickUp]}
           coordinate={{
-            latitude: parcel.start!.lat,
-            longitude: parcel.start!.long,
+            latitude: parcel.pickUpCoor!.lat,
+            longitude: parcel.pickUpCoor!.lng,
           }}
         />
         <Marker
           title="Destination"
+          pinColor={statusColor[ParcelStatusEnum.Arrived]}
           coordinate={{
-            latitude: parcel.end!.lat,
-            longitude: parcel.end!.long,
+            latitude: parcel.arrivedCoor!.lat,
+            longitude: parcel.arrivedCoor!.lng,
           }}
         />
         {parcelTrails}
       </MapView>
+      <ParcelInfo
+        id={parcel.id}
+        name={parcel.name}
+        description={parcel.description}
+        pickUpCoor={parcel.pickUpCoor}
+        arrivedCoor={parcel.arrivedCoor}
+        pickUpPhoto={parcel.pickUpPhoto}
+        arrivedPhoto={parcel.arrivedPhoto}
+        tempThr={parcel.tempThr}
+        hmdThr={parcel.hmdThr}
+        sender={parcel.sender}
+        receiver={parcel.receiver}
+        courier={parcel.courier}
+        device={parcel.device}
+        status={parcel.status}
+        parcelTravels={[]}
+      />
       {parcel.courier?.id === user?.id ? (
-        <>
+        <View>
           {count !== countdown && hasReachEnd ? (
-            <Text>
+            <Text style={styles.textCenter}>
               {`Wait for ${count} second(s)`}
             </Text>
           ) : null}
           <Button
             onPress={onPressSendCode}
-            disabled={count !== countdown || !hasReachEnd}
+            disabled={(count < countdown && count > 0) || !hasReachEnd}
           >
             Send Code to Receiver
           </Button>
-        </>
+        </View>
       ) : null}
       {parcel.receiver?.id === user?.id ? (
         <>

@@ -7,7 +7,9 @@ import { getAccessToken } from '../../utils/token';
 
 import { ParcelTravel } from '../../types';
 
-type GetAllArgs = {};
+type GetAllArgs = {
+  parcelId: string;
+};
 
 type GetAllResponse = {
   parcelTravels: ParcelTravel[];
@@ -29,23 +31,25 @@ export const parcelTravelApi = createApi({
   }),
   endpoints: (builder) => ({
     getAll: builder.query<GetAllResponse, GetAllArgs>({
-      query: () => ({
-        url: '/',
+      query: ({ parcelId }) => ({
+        url: `/?parcel_id=${parcelId}`,
       }),
       transformResponse: (res) => ({
-        parcelTravels: res.parcels.map((cur: any) => (
+        parcelTravels: res?.parcel_travels ? res?.parcel_travels.map((cur: any) => (
           {
             id: cur.id,
             parcelId: cur.parcel_id,
-            coordinate: cur.coordinate,
+            coor: cur.coor,
             temp: cur.temp,
-            humid: cur.humid,
-            is_door_open: cur.is_door_open,
-            signal: cur.signal,
-            gpsTimestamp: cur.gps_timestamp,
-            timestamp: cur.timestamp,
+            hmd: cur.hmd,
+            doorStatus: cur.door_status,
+            sgnl: cur.sgnl,
+            spd: cur.spd,
+            stls: cur.stls,
+            gpsTs: cur.gps_ts,
+            ts: cur.ts,
           }
-        )),
+        )) : [],
       }),
     }),
   }),

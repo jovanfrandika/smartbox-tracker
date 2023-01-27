@@ -55,6 +55,15 @@ export const parcelStatusEnumToString = (status: ParcelStatusEnum): string => {
   }
 };
 
+export const statusColor = {
+  [ParcelStatusEnum.Draft]: '#fca5a5',
+  [ParcelStatusEnum.WaitingForCourier]: '#fdba74',
+  [ParcelStatusEnum.PickUp]: '#fcd34d',
+  [ParcelStatusEnum.OnGoing]: '#bef264',
+  [ParcelStatusEnum.Arrived]: '#86efac',
+  [ParcelStatusEnum.Done]: '#6ee7b7',
+};
+
 export const screens = {
   login: 'Login' as 'Login',
   register: 'Register' as 'Register',

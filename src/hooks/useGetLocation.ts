@@ -5,7 +5,7 @@ import {
 } from 'react-native-permissions';
 import Geolocation from 'react-native-geolocation-service';
 
-import { Coordinate } from '../../../types';
+import { Coordinate } from '../types';
 
 const getLocationPermission = async () => {
   try {
@@ -35,8 +35,7 @@ const getLocationPermission = async () => {
 const useGetLocation = () => {
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
-
-  const geoWatcherRef = useRef<number>();
+  const [geoWatcher, setGeoWatcher] = useState<number | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -47,19 +46,27 @@ const useGetLocation = () => {
     init();
 
     return () => {
-      if (geoWatcherRef.current !== undefined) { Geolocation.clearWatch(geoWatcherRef.current); }
+      if (geoWatcher !== null) {
+        Geolocation.clearWatch(geoWatcher);
+        setGeoWatcher(null);
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (hasLocationPermission) {
-      geoWatcherRef.current = Geolocation.watchPosition((position) => {
+    if (hasLocationPermission && geoWatcher === null) {
+      Geolocation.getCurrentPosition((position) => {
         setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
       }, (err) => {
         console.warn(err.code, err.message);
       });
+      setGeoWatcher(Geolocation.watchPosition((position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      }, (err) => {
+        console.warn(err.code, err.message);
+      }));
     }
-  }, [hasLocationPermission]);
+  }, [hasLocationPermission, geoWatcher]);
 
   return {
     userLocation,

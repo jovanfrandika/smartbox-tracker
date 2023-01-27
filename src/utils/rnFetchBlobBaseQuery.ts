@@ -20,8 +20,6 @@ const rnFetchBlobBaseQuery = ({
       { ...prepareHeaders, ...headers },
       data,
     );
-    console.log(data);
-    console.log(result);
     return { data: result.data };
   } catch (axiosError: any) {
     const err = axiosError;

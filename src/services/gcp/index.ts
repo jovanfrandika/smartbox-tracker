@@ -15,7 +15,7 @@ export const deviceApi = createApi({
   reducerPath: 'deviceApi',
   tagTypes: ['Device'],
   baseQuery: rnFetchBlobBaseQuery({
-    baseUrl: 'https://storage.googleapis.com/smartbox/',
+    baseUrl: '',
     prepareHeaders: (headers: any = {}) => {
       return headers;
     },

@@ -7,11 +7,11 @@ import { getAccessToken } from '../../utils/token';
 
 import { Device } from '../../types';
 
-type GetOneByNameArgs = {
-  name: string,
+type GetOneArgs = {
+  id: string,
 };
 
-type GetOneByNameResponse = Device;
+type GetOneResponse = Device;
 
 export const deviceApi = createApi({
   reducerPath: 'deviceApi',
@@ -28,9 +28,9 @@ export const deviceApi = createApi({
     },
   }),
   endpoints: (builder) => ({
-    getOneByName: builder.query<GetOneByNameResponse, GetOneByNameArgs>({
-      query: ({ name }) => ({
-        url: `/name/${name}`,
+    getOne: builder.query<GetOneResponse, GetOneArgs>({
+      query: ({ id }) => ({
+        url: `/one/${id}`,
       }),
       transformResponse: (res: any) => ({
         id: res.id,
@@ -43,5 +43,5 @@ export const deviceApi = createApi({
 });
 
 export const {
-  useLazyGetOneByNameQuery,
+  useLazyGetOneQuery,
 } = deviceApi;

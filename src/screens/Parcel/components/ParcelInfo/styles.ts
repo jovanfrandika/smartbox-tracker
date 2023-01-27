@@ -12,8 +12,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     flexGrow: 1,
   },
-  sticky: {
-  },
   textCenter: {
     textAlign: 'center',
   },
@@ -22,15 +20,27 @@ const styles = StyleSheet.create({
   map: {
     height: mapHeight,
   },
-  mapCircle: {
-    opacity: 0.25,
-  },
   camera: {
     height: cameraSize,
   },
   image: {
     width: Dimensions.get('screen').width - 24,
     height: cameraSize,
+  },
+  rowCenter: {
+    alignItems: 'center',
+  },
+  indicator: {
+    height: 24,
+    width: 24,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  red: {
+    backgroundColor: '#f43f5e',
+  },
+  green: {
+    backgroundColor: '#22c55e',
   },
   row: {
     flexDirection: 'row',

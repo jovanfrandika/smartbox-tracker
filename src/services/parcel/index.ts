@@ -5,13 +5,32 @@ import axiosBaseQuery from '../../utils/axiosBaseQuery';
 
 import { getAccessToken } from '../../utils/token';
 
-import { Parcel, RawParcel } from '../../types';
+import {
+  Coordinate,
+  Parcel,
+  RawParcel,
+  ParcelStatusEnum,
+} from '../../types';
 
 type GetHistoriesArgs = {};
 
 type GetHistoriesResponse = {
   histories: Record<string, Parcel>;
 };
+
+type GetNearbyPickUpsArgs = {
+  userLoc: Coordinate,
+};
+
+type GetNearbyPickUpsResponse = {
+  parcels: Record<string, Parcel>;
+};
+
+type GetOneArgs = {
+  id: string;
+};
+
+type GetOneResponse = Parcel;
 
 type CreateOneArgs = {
   senderId: string;
@@ -25,6 +44,7 @@ type UpdateOneResponse = {};
 
 type GetPhotoSignedUrlArgs = {
   id: string,
+  status: ParcelStatusEnum.PickUp | ParcelStatusEnum.Arrived,
 };
 
 type GetPhotoSignedUrlResponse = {
@@ -33,15 +53,17 @@ type GetPhotoSignedUrlResponse = {
 
 type CheckPhotoArgs = {
   id: string,
+  status: ParcelStatusEnum.PickUp | ParcelStatusEnum.Arrived,
 };
 
 type CheckPhotoResponse = {};
 
-type SendParcelCodeToReceiverArgs = {
+type SendParcelCodeArgs = {
   id: string,
+  toUserId: string,
 }
 
-type SendParcelCodeToReceiverResponse = {}
+type SendParcelCodeResponse = {}
 
 type VerifyParcelCodeArgs = {
   id: string,
@@ -50,15 +72,23 @@ type VerifyParcelCodeArgs = {
 
 type VerifyParcelCodeResponse = {}
 
-type UpdateProgressArgs = {}
+type UpdateProgressArgs = {
+  id: string,
+}
 
-type UpdateProgressResponse = {
-  parcel: Parcel,
-};
+type UpdateProgressResponse = Parcel;
 
-type OpenDoorArgs = {}
+type OpenDoorArgs = {
+  id: string,
+}
 
 type OpenDoorResponse = {}
+
+type CloseDoorArgs = {
+  id: string,
+}
+
+type CloseDoorResponse = {}
 
 export const parcelApi = createApi({
   reducerPath: 'parcelApi',
@@ -86,10 +116,18 @@ export const parcelApi = createApi({
             id: cur.id,
             name: cur.name,
             description: cur.description,
-            photoUri: cur.photo_uri,
-            isPhotoValid: cur.is_photo_valid,
-            start: cur.start,
-            end: cur.end,
+            pickUpCoor: cur.pick_up_coor,
+            arrivedCoor: cur.arrived_coor,
+            pickUpPhoto: cur.pick_up_photo ? {
+              uri: cur.pick_up_photo.uri,
+              updateAt: cur.pick_up_photo.updated_at,
+            } : null,
+            arrivedPhoto: cur.arrived_photo ? {
+              uri: cur.arrived_photo.uri,
+              updateAt: cur.arrived_photo.updated_at,
+            } : null,
+            tempThr: cur.temp_thr,
+            hmdThr: cur.hmd_thr,
             receiver: cur.receiver,
             sender: cur.sender,
             courier: cur.courier,
@@ -98,7 +136,68 @@ export const parcelApi = createApi({
           },
         }), {}),
       }),
-      providesTags: () => (['Parcel']),
+      providesTags: (res) => (res ? [...Object.keys(res.histories).map((id) => ({ type: 'Parcel' as const, id })), 'Parcel'] : ['Parcel']),
+    }),
+    getNearbyPickUps: builder.query<GetNearbyPickUpsResponse, GetNearbyPickUpsArgs>({
+      query: ({ userLoc }) => ({
+        url: `/pick-ups?lat=${userLoc.lat}&lng=${userLoc.lng}`,
+      }),
+      transformResponse: (res) => ({
+        parcels: res.parcels.reduce((acc: Record<string, Parcel>, cur: any) => ({
+          ...acc,
+          [cur.id]: {
+            id: cur.id,
+            name: cur.name,
+            description: cur.description,
+            pickUpCoor: cur.pick_up_coor,
+            arrivedCoor: cur.arrived_coor,
+            pickUpPhoto: cur.pick_up_photo ? {
+              uri: cur.pick_up_photo.uri,
+              updatedAt: cur.pick_up_photo.update_at,
+            } : null,
+            arrivedPhoto: cur.arrived_photo ? {
+              uri: cur.arrived_photo.uri,
+              updatedAt: cur.arrived_photo.update_at,
+            } : null,
+            tempThr: cur.temp_thr,
+            hmdThr: cur.hmd_thr,
+            receiver: cur.receiver,
+            sender: cur.sender,
+            courier: cur.courier,
+            device: cur.device,
+            status: cur.status,
+          },
+        }), {}),
+      }),
+      providesTags: (res) => (res ? [...Object.keys(res.parcels).map((id) => ({ type: 'Parcel' as const, id })), 'Parcel'] : ['Parcel']),
+    }),
+    getOne: builder.query<GetOneResponse, GetOneArgs>({
+      query: ({ id }) => ({
+        url: `/one/${id}`,
+      }),
+      transformResponse: (res: any) => ({
+        id: res.id,
+        name: res.name,
+        description: res.description,
+        pickUpCoor: res.pick_up_coor,
+        arrivedCoor: res.arrived_coor,
+        pickUpPhoto: res.pick_up_photo ? {
+          uri: res.pick_up_photo.uri,
+          updatedAt: res.pick_up_photo.updated_at,
+        } : null,
+        arrivedPhoto: res.arrived_photo ? {
+          uri: res.arrived_photo.uri,
+          updatedAt: res.arrived_photo.updated_at,
+        } : null,
+        tempThr: res.temp_thr,
+        hmdThr: res.hmd_thr,
+        receiver: res.receiver,
+        sender: res.sender,
+        courier: res.courier,
+        device: res.device,
+        status: res.status,
+      }),
+      providesTags: (res) => (res ? [{ type: 'Parcel' as const, id: res.id }] : ['Parcel']),
     }),
     createOne: builder.mutation<CreateOneResponse, CreateOneArgs>({
       query: ({ senderId }) => ({
@@ -114,44 +213,66 @@ export const parcelApi = createApi({
       query: (parcel) => ({
         url: '/',
         method: 'PUT',
-        data: parcel,
+        data: {
+          id: parcel.id,
+          name: parcel.name,
+          description: parcel.description,
+          pick_up_coor: parcel.pickUpCoor,
+          arrived_coor: parcel.arrivedCoor,
+          pick_up_photo: parcel.pickUpPhoto ? ({
+            updated_at: parcel.pickUpPhoto.updatedAt,
+          }) : null,
+          arrived_photo: parcel.arrivedPhoto ? ({
+            updated_at: parcel.arrivedPhoto.updatedAt,
+          }) : null,
+          temp_thr: parcel.tempThr,
+          hmd_thr: parcel.hmdThr,
+          receiver_id: parcel.receiverId,
+          sender_id: parcel.senderId,
+          courier_id: parcel.courierId,
+          device_id: parcel.deviceId,
+          status: parcel.status,
+        },
       }),
       invalidatesTags: () => (['Parcel']),
     }),
     getPhotoSignedUrl: builder.mutation<GetPhotoSignedUrlResponse, GetPhotoSignedUrlArgs>({
-      query: ({ id }) => ({
+      query: ({ id, status }) => ({
         url: '/photo/url',
         method: 'POST',
         data: {
           id,
+          status,
         },
       }),
     }),
     checkPhoto: builder.mutation<CheckPhotoResponse, CheckPhotoArgs>({
-      query: ({ id }) => ({
+      query: ({ id, status }) => ({
         url: '/photo/check',
         method: 'POST',
         data: {
           id,
+          status,
         },
       }),
       invalidatesTags: () => (['Parcel']),
     }),
-    sendParcelCodeToReceiver: builder.mutation<
-      SendParcelCodeToReceiverResponse,
-      SendParcelCodeToReceiverArgs
+    sendParcelCode: builder.mutation<
+      SendParcelCodeResponse,
+      SendParcelCodeArgs
     >({
-      query: ({ id }) => ({
+      query: ({ id, toUserId }) => ({
         url: '/code/send',
         method: 'POST',
         data: {
           id,
+          to_user_id: toUserId,
         },
       }),
     }),
     verifyParcelCode: builder.mutation<VerifyParcelCodeResponse, VerifyParcelCodeArgs>({
       query: ({ id, code }) => ({
-        url: '/photo/verify',
+        url: '/code/verify',
         method: 'POST',
         data: {
           id,
@@ -161,32 +282,53 @@ export const parcelApi = createApi({
       invalidatesTags: () => (['Parcel']),
     }),
     updateProgress: builder.mutation<UpdateProgressResponse, UpdateProgressArgs>({
-      query: () => ({
+      query: ({ id }) => ({
         url: '/progress',
         method: 'POST',
+        data: {
+          id,
+        },
       }),
       transformResponse: (res: any) => ({
-        parcel: {
-          id: res.parcel.id,
-          name: res.parcel.name,
-          description: res.parcel.description,
-          photoUri: res.parcel.photo_uri,
-          isPhotoValid: res.parcel.is_photo_valid,
-          start: res.parcel.start,
-          end: res.parcel.end,
-          receiver: res.parcel.receiver,
-          sender: res.parcel.sender,
-          courier: res.parcel.courier,
-          device: res.parcel.device,
-          status: res.parcel.status,
-        },
+        id: res.id,
+        name: res.name,
+        description: res.description,
+        pickUpCoor: res.pick_up_coor,
+        arrivedCoor: res.arrived_coor,
+        pickUpPhoto: res.pick_up_photo ? {
+          uri: res.pick_up_photo.uri,
+          updatedAt: res.pick_up_photo.updated_at,
+        } : null,
+        arrivedPhoto: res.arrived_photo ? {
+          uri: res.arrived_photo.uri,
+          updatedAt: res.arrived_photo.updated_at,
+        } : null,
+        tempThr: res.temp_thr,
+        hmdThr: res.hmd_thr,
+        receiver: res.receiver,
+        sender: res.sender,
+        courier: res.courier,
+        device: res.device,
+        status: res.status,
       }),
       invalidatesTags: () => (['Parcel']),
     }),
     openDoor: builder.mutation<OpenDoorResponse, OpenDoorArgs>({
-      query: () => ({
+      query: ({ id }) => ({
         url: '/open',
         method: 'POST',
+        data: {
+          id,
+        },
+      }),
+    }),
+    closeDoor: builder.mutation<CloseDoorResponse, CloseDoorArgs>({
+      query: ({ id }) => ({
+        url: '/close',
+        method: 'POST',
+        data: {
+          id,
+        },
       }),
     }),
   }),
@@ -194,12 +336,15 @@ export const parcelApi = createApi({
 
 export const {
   useGetHistoriesQuery,
+  useLazyGetNearbyPickUpsQuery,
+  useGetOneQuery,
   useCreateOneMutation,
   useUpdateOneMutation,
   useGetPhotoSignedUrlMutation,
   useCheckPhotoMutation,
-  useSendParcelCodeToReceiverMutation,
+  useSendParcelCodeMutation,
   useVerifyParcelCodeMutation,
   useUpdateProgressMutation,
   useOpenDoorMutation,
+  useCloseDoorMutation,
 } = parcelApi;

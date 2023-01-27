@@ -12,6 +12,8 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     flexGrow: 1,
   },
+  sticky: {
+  },
   textCenter: {
     textAlign: 'center',
   },
@@ -19,6 +21,9 @@ const styles = StyleSheet.create({
   },
   map: {
     height: mapHeight,
+  },
+  mapCircle: {
+    opacity: 0.25,
   },
   camera: {
     height: cameraSize,

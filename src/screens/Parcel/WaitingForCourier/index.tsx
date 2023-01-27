@@ -1,5 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import {
   Button, Modal, Portal, Snackbar, Text,
 } from 'react-native-paper';
@@ -10,14 +12,18 @@ import MapView, { Marker } from 'react-native-maps';
 import { Parcel, RawParcel } from '../../../types';
 import { useAppSelector } from '../../../stores';
 import { useUpdateOneMutation, useUpdateProgressMutation } from '../../../services/parcel';
-import { buildCameraFormat, emptyId } from '../../../constants';
-import styles, { cameraSize } from './styles';
-import useCameraPermission from '../hooks/useCameraPermission';
-import { useLazyGetOneByNameQuery } from '../../../services/device';
+import { useLazyGetOneQuery } from '../../../services/device';
+import { emptyId } from '../../../constants';
+import styles from './styles';
+
+import useCameraPermission from '../../../hooks/useCameraPermission';
+import useInterval from '../../../hooks/useInterval';
+import ParcelInfo from '../components/ParcelInfo';
 
 type Props = {
   parcel: Parcel,
-  setParcel: React.Dispatch<React.SetStateAction<Parcel>>;
+  isLoading: boolean,
+  refetch: () => Promise<any>;
 };
 
 type CameraModalProps = {
@@ -33,45 +39,53 @@ const CameraModal = ({
   hasCameraPermission, isOpen, onHideModal, setData,
 }: CameraModalProps) => {
   const cameraRef = useRef<Camera>(null);
-  const devices = useCameraDevices('ultra-wide-angle-camera');
+  const devices = useCameraDevices('wide-angle-camera');
 
-  const [triggerGetDeviceByName, { isLoading }] = useLazyGetOneByNameQuery({});
+  const [triggerGetDevice, { isLoading }] = useLazyGetOneQuery({});
 
-  const [frameProcessor, barcodes] = useScanBarcodes([BarcodeFormat.QR_CODE], {
-    checkInverted: true,
-  });
-
-  const onPressTakePicture = async () => {
-    try {
-      if (barcodes.length < 0) {
-        return;
-      }
-
-      const latestBarcode = barcodes[barcodes.length];
-
-      if (latestBarcode.rawValue?.includes('/device/name')) {
-        const name = latestBarcode.rawValue.replace('/device/name/', '');
-        const res = await triggerGetDeviceByName({ name });
-
-        if ('data' in res) {
-          setData((prevData) => ({
-            ...prevData,
-            deviceId: res.data!.id,
-          }));
-          return;
-        }
-      }
-      throw new Error('Invalid QR Code');
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const [frameProcessor, barcodes] = useScanBarcodes([BarcodeFormat.QR_CODE]);
 
   const onDismiss = () => {
     if (!isLoading) {
       onHideModal();
     }
   };
+
+  useEffect(() => {
+    const scan = async () => {
+      try {
+        if (barcodes.length < 0) {
+          return;
+        }
+
+        const latestBarcode = barcodes[barcodes.length - 1];
+        if (!latestBarcode) {
+          return;
+        }
+
+        const hexRegExp = /^[a-f\d]{24}$/i;
+        if (hexRegExp.test(latestBarcode.rawValue || '')) {
+          const id = latestBarcode.rawValue!;
+          const res = await triggerGetDevice({ id });
+
+          if ('data' in res) {
+            setData((prevData) => ({
+              ...prevData,
+              deviceId: res.data!.id,
+            }));
+            return;
+          }
+        }
+        throw new Error('Invalid QR Code');
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    if (!isLoading && barcodes.length) {
+      scan();
+    }
+  }, [isLoading, barcodes]);
 
   return (
     <Portal>
@@ -81,29 +95,59 @@ const CameraModal = ({
           style={styles.camera}
           device={devices.back!}
           isActive={isOpen && hasCameraPermission}
-          format={buildCameraFormat(cameraSize)}
+          // format={buildCameraFormat(cameraSize)}
+          enableHighQualityPhotos={false}
           frameProcessor={frameProcessor}
-          frameProcessorFps={5}
-          photo
+          frameProcessorFps={1}
         />
-        <Button onPress={onPressTakePicture} disabled={isLoading}>
-          Take Picture
-        </Button>
       </Modal>
     </Portal>
   );
 };
 
-const WaitingForCourier = ({ parcel, setParcel }: Props) => {
+const WaitingForCourier = ({
+  parcel,
+  isLoading: isGetParcelLoading,
+  refetch,
+}: Props) => {
   const user = useAppSelector((state) => state.auth.user);
 
   if (parcel.receiver?.id === user?.id || parcel.sender?.id === user?.id) {
+    useInterval({ cb: refetch, delay: 5000 });
+
     return (
-      <View>
-        <Text>
+      <ScrollView
+        style={styles.container}
+        refreshControl={(
+          <RefreshControl
+            refreshing={isGetParcelLoading}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
+      )}
+      >
+        <ParcelInfo
+          id={parcel.id}
+          name={parcel.name}
+          description={parcel.description}
+          pickUpCoor={parcel.pickUpCoor}
+          arrivedCoor={parcel.arrivedCoor}
+          pickUpPhoto={parcel.pickUpPhoto}
+          arrivedPhoto={parcel.arrivedPhoto}
+          tempThr={parcel.tempThr}
+          hmdThr={parcel.hmdThr}
+          sender={parcel.sender}
+          receiver={parcel.receiver}
+          courier={parcel.courier}
+          device={parcel.device}
+          status={parcel.status}
+          parcelTravels={[]}
+        />
+        <Text style={styles.textCenter}>
           Menunggu kurir
         </Text>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -111,10 +155,12 @@ const WaitingForCourier = ({ parcel, setParcel }: Props) => {
     id: parcel.id,
     name: parcel.name,
     description: parcel.description,
-    photoUri: parcel.photoUri,
-    isPhotoValid: parcel.isPhotoValid,
-    start: parcel.start!,
-    end: parcel.end!,
+    pickUpCoor: parcel.pickUpCoor!,
+    arrivedCoor: parcel.arrivedCoor!,
+    pickUpPhoto: null,
+    arrivedPhoto: null,
+    tempThr: parcel.tempThr!,
+    hmdThr: parcel.hmdThr!,
     senderId: parcel.sender!.id,
     receiverId: parcel.receiver!.id,
     courierId: user!.id,
@@ -133,12 +179,14 @@ const WaitingForCourier = ({ parcel, setParcel }: Props) => {
 
   const [error, setError] = useState(initialError);
 
+  const mapRef = useRef<MapView | null>(null);
+
   const onPressSave = useCallback(async () => {
-    if (data.start.temp > data.end.temp) {
+    if (data.tempThr!.low > data.tempThr!.high) {
       setError('Invalid temperature');
       return;
     }
-    if (data.start.humid > data.end.humid) {
+    if (data.hmdThr!.low > data.hmdThr!.high) {
       setError('Invalid humidity');
       return;
     }
@@ -148,10 +196,6 @@ const WaitingForCourier = ({ parcel, setParcel }: Props) => {
     }
     if (data.description.length < 6) {
       setError('Description too short');
-      return;
-    }
-    if (!data.isPhotoValid) {
-      setError('Photo is invalid');
       return;
     }
     if (data.receiverId === emptyId) {
@@ -172,19 +216,34 @@ const WaitingForCourier = ({ parcel, setParcel }: Props) => {
 
   const onPressOrder = useCallback(async () => {
     await onPressSave();
-    const res = await triggerUpdateProgress({});
+    const res = await triggerUpdateProgress({ id: parcel.id });
     if ('data' in res) {
-      setParcel(res.data.parcel);
+      refetch();
     }
   }, [onPressSave]);
 
-  const isLoading = isUpdateParcelLoading || isUpdateProgressLoading;
+  const isLoading = isUpdateParcelLoading || isUpdateProgressLoading || isGetParcelLoading;
+
+  useEffect(() => {
+    if (data.deviceId !== emptyId) {
+      setIsOpenCamera(false);
+      onPressOrder();
+    }
+  }, [data]);
 
   return (
     <ScrollView
       contentContainerStyle={styles.container}
       stickyHeaderIndices={[0]}
       invertStickyHeaders
+      refreshControl={(
+        <RefreshControl
+          refreshing={isGetParcelLoading}
+          onRefresh={() => {
+            refetch();
+          }}
+        />
+      )}
     >
       <Snackbar
         visible={!!error}
@@ -198,37 +257,65 @@ const WaitingForCourier = ({ parcel, setParcel }: Props) => {
         onHideModal={() => setIsOpenCamera(false)}
         setData={setData}
       />
-      <Text>
-        {parcel.name}
-      </Text>
-      <Text>
-        {parcel.description}
-      </Text>
-      <Image
-        source={{ uri: parcel.photoUri }}
-        style={styles.image}
-      />
-      <MapView>
+      <MapView
+        ref={(ref) => {
+          mapRef.current = ref as MapView;
+        }}
+        style={[styles.map, styles.spaceBottom]}
+        onMapReady={() => {
+          mapRef.current?.animateToRegion({
+            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+            latitudeDelta: 0.015,
+            longitudeDelta: 0.0121,
+          });
+        }}
+      >
         <Marker
           title="Pick Up"
           coordinate={{
-            latitude: parcel.start!.lat,
-            longitude: parcel.start!.long,
+            latitude: parcel.pickUpCoor!.lat,
+            longitude: parcel.pickUpCoor!.lng,
           }}
         />
         <Marker
           title="Destination"
           coordinate={{
-            latitude: parcel.end!.lat,
-            longitude: parcel.end!.long,
+            latitude: parcel.arrivedCoor!.lat,
+            longitude: parcel.arrivedCoor!.lng,
           }}
         />
       </MapView>
+      <ParcelInfo
+        id={parcel.id}
+        name={parcel.name}
+        description={parcel.description}
+        pickUpCoor={parcel.pickUpCoor}
+        arrivedCoor={parcel.arrivedCoor}
+        pickUpPhoto={parcel.pickUpPhoto}
+        arrivedPhoto={parcel.arrivedPhoto}
+        tempThr={parcel.tempThr}
+        hmdThr={parcel.hmdThr}
+        sender={parcel.sender}
+        receiver={parcel.receiver}
+        courier={parcel.courier}
+        device={parcel.device}
+        status={parcel.status}
+        parcelTravels={[]}
+      />
       <View style={styles.row}>
-        <Button onPress={() => setIsOpenCamera(true)} disabled={isLoading}>
+        <Button
+          onPress={() => setIsOpenCamera(true)}
+          disabled={isLoading}
+          style={styles.rowItem}
+        >
           Scan Smartbox
         </Button>
-        <Button onPress={onPressOrder} disabled={data.deviceId === emptyId || isLoading}>
+        <Button
+          onPress={onPressOrder}
+          disabled={data.deviceId === emptyId || isLoading}
+          style={styles.rowItem}
+        >
           Order
         </Button>
       </View>

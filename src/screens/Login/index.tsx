@@ -33,11 +33,8 @@ const Login = () => {
   const dispatch = useAppDispatch();
 
   const onPress = useCallback(async () => {
-    console.log('login');
     const res = await loginTrigger({ email, password });
-    console.log('login done');
     if ('error' in res) {
-      console.log('login res', res);
       return;
     }
 
