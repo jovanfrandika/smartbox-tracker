@@ -5,6 +5,7 @@ import {
   RefreshControl, ScrollView, View,
 } from 'react-native';
 import {
+  Banner,
   Button, Snackbar, Text,
 } from 'react-native-paper';
 import MapView, { Circle, Marker } from 'react-native-maps';
@@ -40,7 +41,7 @@ const WaitingForCourier = ({
     useInterval({ cb: refetch, delay: 5000 });
     return (
       <ScrollView
-        style={styles.container}
+        contentContainerStyle={styles.container}
         refreshControl={(
           <RefreshControl
             refreshing={isGetParcelLoading}
@@ -50,6 +51,12 @@ const WaitingForCourier = ({
           />
         )}
       >
+        <Banner
+          visible
+          style={styles.spaceBottom}
+        >
+          {parcel.pickUpPhoto === null ? 'Menunggu kurir ke pick up' : 'Menunggu kurir untuk memulai perjalanan'}
+        </Banner>
         <ParcelInfo
           id={parcel.id}
           name={parcel.name}
@@ -67,12 +74,6 @@ const WaitingForCourier = ({
           status={parcel.status}
           parcelTravels={[]}
         />
-        <Text
-          variant="titleMedium"
-          style={[styles.textCenter, styles.spaceBottom]}
-        >
-          {parcel.pickUpPhoto === null ? 'Menunggu kurir ke pick up' : 'Menunggu kurir untuk memulai perjalanan'}
-        </Text>
       </ScrollView>
     );
   }
@@ -110,25 +111,7 @@ const WaitingForCourier = ({
   const isDisabled = isLoading || !hasReachedEnd;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      stickyHeaderIndices={[5]}
-      invertStickyHeaders
-      refreshControl={(
-        <RefreshControl
-          refreshing={isGetParcelLoading}
-          onRefresh={() => {
-            refetch();
-          }}
-        />
-      )}
-    >
-      <Snackbar
-        visible={!!error}
-        onDismiss={() => setError(initialError)}
-      >
-        {error}
-      </Snackbar>
+    <>
       <CameraModal
         hasCameraPermission
         parcelId={parcel.id}
@@ -137,72 +120,84 @@ const WaitingForCourier = ({
         onHideModal={() => setIsCameraOpen(false)}
         setData={() => {}}
       />
-      <MapView
-        ref={(ref) => {
-          mapRef.current = ref as MapView;
-        }}
-        style={[styles.map, styles.spaceBottom]}
-        onMapReady={() => {
-          mapRef.current?.animateToRegion({
-            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
-            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.0121,
-          });
-        }}
-      >
-        {userLocation ? (
-          <Marker
-            title="Your location"
-            coordinate={{
-              latitude: userLocation.lat,
-              longitude: userLocation.lng,
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={(
+          <RefreshControl
+            refreshing={isGetParcelLoading}
+            onRefresh={() => {
+              refetch();
             }}
           />
-        ) : null}
-        <Circle
-          center={{ latitude: parcel.pickUpCoor!.lat, longitude: parcel.pickUpCoor!.lng }}
-          radius={distanceRadius}
-          strokeWidth={2}
-          strokeColor={statusColor[ParcelStatusEnum.PickUp]}
-          fillColor={statusColor[ParcelStatusEnum.PickUp]}
-          style={styles.mapCircle}
-        />
-        <Marker
-          title="Pick Up"
-          pinColor={statusColor[ParcelStatusEnum.PickUp]}
-          coordinate={{
-            latitude: parcel.pickUpCoor!.lat,
-            longitude: parcel.pickUpCoor!.lng,
+        )}
+      >
+        <MapView
+          ref={(ref) => {
+            mapRef.current = ref as MapView;
           }}
-        />
-        <Marker
-          title="Destination"
-          pinColor={statusColor[ParcelStatusEnum.Arrived]}
-          coordinate={{
-            latitude: parcel.arrivedCoor!.lat,
-            longitude: parcel.arrivedCoor!.lng,
+          style={[styles.map, styles.spaceBottom]}
+          onMapReady={() => {
+            mapRef.current?.animateToRegion({
+              latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+              longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.0121,
+            });
           }}
+        >
+          {userLocation ? (
+            <Marker
+              title="Your location"
+              coordinate={{
+                latitude: userLocation.lat,
+                longitude: userLocation.lng,
+              }}
+            />
+          ) : null}
+          <Circle
+            center={{ latitude: parcel.pickUpCoor!.lat, longitude: parcel.pickUpCoor!.lng }}
+            radius={distanceRadius}
+            strokeWidth={2}
+            strokeColor={statusColor[ParcelStatusEnum.PickUp]}
+            fillColor={statusColor[ParcelStatusEnum.PickUp]}
+            style={styles.mapCircle}
+          />
+          <Marker
+            title="Pick Up"
+            pinColor={statusColor[ParcelStatusEnum.PickUp]}
+            coordinate={{
+              latitude: parcel.pickUpCoor!.lat,
+              longitude: parcel.pickUpCoor!.lng,
+            }}
+          />
+          <Marker
+            title="Destination"
+            pinColor={statusColor[ParcelStatusEnum.Arrived]}
+            coordinate={{
+              latitude: parcel.arrivedCoor!.lat,
+              longitude: parcel.arrivedCoor!.lng,
+            }}
+          />
+        </MapView>
+        <ParcelInfo
+          id={parcel.id}
+          name={parcel.name}
+          description={parcel.description}
+          pickUpCoor={parcel.pickUpCoor}
+          arrivedCoor={parcel.arrivedCoor}
+          pickUpPhoto={parcel.pickUpPhoto}
+          arrivedPhoto={parcel.arrivedPhoto}
+          tempThr={parcel.tempThr}
+          hmdThr={parcel.hmdThr}
+          sender={parcel.sender}
+          receiver={parcel.receiver}
+          courier={parcel.courier}
+          device={parcel.device}
+          status={parcel.status}
+          parcelTravels={[]}
         />
-      </MapView>
-      <ParcelInfo
-        id={parcel.id}
-        name={parcel.name}
-        description={parcel.description}
-        pickUpCoor={parcel.pickUpCoor}
-        arrivedCoor={parcel.arrivedCoor}
-        pickUpPhoto={parcel.pickUpPhoto}
-        arrivedPhoto={parcel.arrivedPhoto}
-        tempThr={parcel.tempThr}
-        hmdThr={parcel.hmdThr}
-        sender={parcel.sender}
-        receiver={parcel.receiver}
-        courier={parcel.courier}
-        device={parcel.device}
-        status={parcel.status}
-        parcelTravels={[]}
-      />
-      <View style={[styles.sticky, styles.spaceBottom]}>
+      </ScrollView>
+      <View style={[styles.footer, styles.sticky, styles.spaceBottom]}>
         <Button
           mode="contained-tonal"
           onPress={() => setIsCameraOpen(true)}
@@ -211,7 +206,7 @@ const WaitingForCourier = ({
         >
           Open Camera
         </Button>
-        <View style={[styles.row, styles.spaceBottom]}>
+        <View style={[styles.row]}>
           <Button
             onPress={() => triggerOpenDoor({ id: parcel.id })}
             disabled={isDisabled}
@@ -229,7 +224,13 @@ const WaitingForCourier = ({
           </Button>
         </View>
       </View>
-    </ScrollView>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(initialError)}
+      >
+        {error}
+      </Snackbar>
+    </>
   );
 };
 

@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
     paddingVertical: 24,
-    flex: 1,
+    flexGrow: 1,
   },
   parcelCard: {
     backgroundColor: '#e2e8f0',

@@ -43,8 +43,6 @@ const Done = ({
   return (
     <ScrollView
       contentContainerStyle={styles.container}
-      stickyHeaderIndices={[0]}
-      invertStickyHeaders
       refreshControl={(
         <RefreshControl
           refreshing={isGetParcelLoading || isGetParcelDataLoading}

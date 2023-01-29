@@ -20,6 +20,7 @@ import Done from './Done';
 import styles from './styles';
 import { useGetOneQuery } from '../../services/parcel';
 import { parcelStatusEnumToString } from '../../constants';
+import { useAppSelector } from '../../stores';
 
 type ParcelScreenRouteProp = RouteProp<RootStackParamList, 'Parcel'>;
 
@@ -32,6 +33,8 @@ const Parcel = () => {
   const { data: parcel, isLoading, refetch } = useGetOneQuery({
     id: route.params.parcelId,
   });
+
+  const user = useAppSelector((state) => state.auth.user);
 
   const status = parcel?.status;
 
@@ -48,7 +51,7 @@ const Parcel = () => {
             Back
           </Button>
           <Text variant="titleMedium" style={styles.headerTitle}>
-            Smartbox
+            {user?.name}
           </Text>
         </View>
       </SafeAreaView>
@@ -68,7 +71,7 @@ const Parcel = () => {
           {parcelStatusEnumToString(parcel.status)}
         </Text>
         <Text variant="titleMedium" style={styles.headerTitle}>
-          Smartbox
+          {user?.name}
         </Text>
       </View>
       <Snackbar

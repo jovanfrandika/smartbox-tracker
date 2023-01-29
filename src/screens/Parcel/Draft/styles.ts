@@ -27,6 +27,10 @@ const styles = StyleSheet.create({
     width: Dimensions.get('screen').width - 24,
     height: cameraSize,
   },
+  footer: {
+    paddingHorizontal: 12,
+    paddingVertical: 24,
+  },
   row: {
     flexDirection: 'row',
     width: '100%',
@@ -36,6 +40,10 @@ const styles = StyleSheet.create({
   },
   rowSpace: {
     marginLeft: 5,
+  },
+  active: {
+    color: 'white',
+    backgroundColor: 'tomato',
   },
   spaceBottom: {
     marginBottom: 12,

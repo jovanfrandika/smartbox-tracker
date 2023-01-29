@@ -162,13 +162,15 @@ const Draft = ({
     return friends.map((friend) => (
       <List.Item
         key={friend.friendUserId}
-        title={`${friend.name} ${data.receiverId === friend.friendUserId ? '(Selected)' : ''}`}
+        title={friend.name}
         description={friend.email}
         onPress={() => setData({
           ...data,
           receiverId: friend.friendUserId,
         })}
-        style={styles.spaceBottom}
+        style={[styles.spaceBottom, data.receiverId === friend.friendUserId && styles.active]}
+        titleStyle={[data.receiverId === friend.friendUserId && styles.active]}
+        descriptionStyle={[data.receiverId === friend.friendUserId && styles.active]}
       />
     ));
   }, [data, friendsData]);
@@ -222,20 +224,7 @@ const Draft = ({
   }, [userLocation]);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      stickyHeaderIndices={[0]}
-      invertStickyHeaders
-      refreshControl={(
-        <RefreshControl
-          refreshing={isLoading}
-          onRefresh={() => {
-            refetch();
-            refetchFriends();
-          }}
-        />
-      )}
-    >
+    <>
       <MapModal
         label="pickUpCoor"
         data={data}
@@ -250,118 +239,132 @@ const Draft = ({
         isOpen={isArrivedMapOpen}
         onHideModal={() => setIsArrivedMapOpen(false)}
       />
-      <TextInput
-        label="Name"
-        mode="outlined"
-        value={data.name}
-        autoCapitalize="none"
-        onChangeText={(newVal: string) => setData({ ...data, name: newVal })}
-        style={styles.spaceBottom}
-      />
-      <TextInput
-        label="Description"
-        mode="outlined"
-        value={data.description}
-        autoCapitalize="none"
-        onChangeText={(newVal: string) => setData({ ...data, description: newVal })}
-        style={styles.spaceBottom}
-      />
-      <View style={[styles.row, styles.spaceBottom]}>
-        <Button mode="contained" onPress={() => setIsPickUpMapOpen(true)} style={[styles.rowItem]}>
-          Change pick up
-        </Button>
-        <View style={styles.rowSpace} />
-        <Button mode="contained" onPress={() => setIsArrivedMapOpen(true)} style={[styles.rowItem]}>
-          Change destination
-        </Button>
-      </View>
-      <View style={styles.row}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={(
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={() => {
+              refetch();
+              refetchFriends();
+            }}
+          />
+        )}
+      >
         <TextInput
-          label="Lowest Temp"
+          label="Name"
           mode="outlined"
-          value={data.tempThr!.low.toString()}
+          value={data.name}
           autoCapitalize="none"
-          onChangeText={(newVal: string) => setData({
-            ...data,
-            tempThr: {
-              ...data.tempThr!,
-              low: toNum(newVal),
-            },
-          })}
-          style={[styles.spaceBottom, styles.rowItem]}
+          onChangeText={(newVal: string) => setData({ ...data, name: newVal })}
+          style={styles.spaceBottom}
         />
-        <View style={styles.rowSpace} />
         <TextInput
-          label="Highest Temp"
+          label="Description"
           mode="outlined"
-          value={data.tempThr!.high.toString()}
+          value={data.description}
           autoCapitalize="none"
-          onChangeText={(newVal: string) => setData({
-            ...data,
-            tempThr: {
-              ...data.tempThr!,
-              high: toNum(newVal),
-            },
-          })}
-          style={[styles.spaceBottom, styles.rowItem]}
+          onChangeText={(newVal: string) => setData({ ...data, description: newVal })}
+          style={styles.spaceBottom}
         />
-      </View>
-      <View style={styles.row}>
-        <TextInput
-          label="Lowest Humidity"
-          mode="outlined"
-          value={data.hmdThr!.low.toString()}
-          autoCapitalize="none"
-          onChangeText={(newVal: string) => setData({
-            ...data,
-            hmdThr: {
-              ...data.hmdThr!,
-              low: toNum(newVal),
-            },
-          })}
-          style={[styles.spaceBottom, styles.rowItem]}
-        />
-        <View style={styles.rowSpace} />
-        <TextInput
-          label="Highest Humidity"
-          mode="outlined"
-          value={data.hmdThr!.high.toString()}
-          autoCapitalize="none"
-          onChangeText={(newVal: string) => setData({
-            ...data,
-            hmdThr: {
-              ...data.hmdThr!,
-              high: toNum(newVal),
-            },
-          })}
-          style={[styles.spaceBottom, styles.rowItem]}
-        />
-      </View>
-      {FriendList}
-      <View>
-        <View style={styles.row}>
-          <Button
-            onPress={onPressSave}
-            style={styles.rowItem}
-          >
-            Save
+        <View style={[styles.row, styles.spaceBottom]}>
+          <Button mode="contained" onPress={() => setIsPickUpMapOpen(true)} style={[styles.rowItem]}>
+            Change pick up
           </Button>
-          <Button
-            mode="contained"
-            onPress={onPressOrder}
-            style={styles.rowItem}
-          >
-            Order
+          <View style={styles.rowSpace} />
+          <Button mode="contained" onPress={() => setIsArrivedMapOpen(true)} style={[styles.rowItem]}>
+            Change destination
           </Button>
         </View>
-        <Snackbar
-          visible={!!error}
-          onDismiss={() => setError(initialError)}
+        <View style={styles.row}>
+          <TextInput
+            label="Lowest Temp"
+            mode="outlined"
+            value={data.tempThr!.low.toString()}
+            autoCapitalize="none"
+            onChangeText={(newVal: string) => setData({
+              ...data,
+              tempThr: {
+                ...data.tempThr!,
+                low: toNum(newVal),
+              },
+            })}
+            style={[styles.spaceBottom, styles.rowItem]}
+          />
+          <View style={styles.rowSpace} />
+          <TextInput
+            label="Highest Temp"
+            mode="outlined"
+            value={data.tempThr!.high.toString()}
+            autoCapitalize="none"
+            onChangeText={(newVal: string) => setData({
+              ...data,
+              tempThr: {
+                ...data.tempThr!,
+                high: toNum(newVal),
+              },
+            })}
+            style={[styles.spaceBottom, styles.rowItem]}
+          />
+        </View>
+        <View style={styles.row}>
+          <TextInput
+            label="Lowest Humidity"
+            mode="outlined"
+            value={data.hmdThr!.low.toString()}
+            autoCapitalize="none"
+            onChangeText={(newVal: string) => setData({
+              ...data,
+              hmdThr: {
+                ...data.hmdThr!,
+                low: toNum(newVal),
+              },
+            })}
+            style={[styles.spaceBottom, styles.rowItem]}
+          />
+          <View style={styles.rowSpace} />
+          <TextInput
+            label="Highest Humidity"
+            mode="outlined"
+            value={data.hmdThr!.high.toString()}
+            autoCapitalize="none"
+            onChangeText={(newVal: string) => setData({
+              ...data,
+              hmdThr: {
+                ...data.hmdThr!,
+                high: toNum(newVal),
+              },
+            })}
+            style={[styles.spaceBottom, styles.rowItem]}
+          />
+        </View>
+        <View>
+          {FriendList}
+        </View>
+      </ScrollView>
+      <View style={[styles.footer, styles.row]}>
+        <Button
+          onPress={onPressSave}
+          style={styles.rowItem}
         >
-          {error}
-        </Snackbar>
+          Save
+        </Button>
+        <View style={styles.rowSpace} />
+        <Button
+          mode="contained"
+          onPress={onPressOrder}
+          style={styles.rowItem}
+        >
+          Order
+        </Button>
       </View>
-    </ScrollView>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(initialError)}
+      >
+        {error}
+      </Snackbar>
+    </>
   );
 };
 

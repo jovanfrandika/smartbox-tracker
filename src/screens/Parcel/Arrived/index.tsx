@@ -13,12 +13,12 @@ import { Parcel, ParcelStatusEnum } from '../../../types';
 import { useAppSelector } from '../../../stores';
 import { useOpenDoorMutation, useUpdateProgressMutation } from '../../../services/parcel';
 import styles from './styles';
-import useGetLocation from '../../../hooks/useGetLocation';
 import CameraModal from '../components/CameraModal';
 import { statusColor } from '../../../constants';
 import useInterval from '../../../hooks/useInterval';
 import ParcelInfo from '../components/ParcelInfo';
 import useCameraPermission from '../../../hooks/useCameraPermission';
+import { useGetAllQuery } from '../../../services/parcelTravel';
 
 type Props = {
   parcel: Parcel,
@@ -43,6 +43,11 @@ const Arrived = ({
     { isLoading: isUpdateProgressLoading },
   ] = useUpdateProgressMutation({});
 
+  const {
+    data: parcelTravelData,
+    isLoading: isGetParcelDataLoading,
+  } = useGetAllQuery({ parcelId: parcel.id });
+
   const mapRef = useRef<MapView | null>(null);
 
   const onPressOrder = useCallback(async () => {
@@ -54,12 +59,101 @@ const Arrived = ({
     }
   }, []);
 
-  const isLoading = isOpenDoorLoading || isUpdateProgressLoading || isGetParcelLoading;
+  const isLoading = isOpenDoorLoading
+    || isUpdateProgressLoading || isGetParcelLoading || isGetParcelDataLoading;
   const isDisabled = isLoading;
 
   if (parcel.receiver?.id === user?.id || parcel.sender?.id === user?.id) {
     useInterval({ cb: refetch, delay: 5000 });
     return (
+      <>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          refreshControl={(
+            <RefreshControl
+              refreshing={isGetParcelLoading}
+              onRefresh={() => {
+                refetch();
+              }}
+            />
+          )}
+        >
+          <MapView
+            ref={(ref) => {
+              mapRef.current = ref as MapView;
+            }}
+            style={[styles.map, styles.spaceBottom]}
+            onMapReady={() => {
+              mapRef.current?.animateToRegion({
+                latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+                longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+                latitudeDelta: 0.015,
+                longitudeDelta: 0.0121,
+              });
+            }}
+          >
+            <Marker
+              title="Pick Up"
+              pinColor={statusColor[ParcelStatusEnum.PickUp]}
+              coordinate={{
+                latitude: parcel.pickUpCoor!.lat,
+                longitude: parcel.pickUpCoor!.lng,
+              }}
+            />
+            <Marker
+              title="Destination"
+              pinColor={statusColor[ParcelStatusEnum.Arrived]}
+              coordinate={{
+                latitude: parcel.arrivedCoor!.lat,
+                longitude: parcel.arrivedCoor!.lng,
+              }}
+            />
+          </MapView>
+          <ParcelInfo
+            id={parcel.id}
+            name={parcel.name}
+            description={parcel.description}
+            pickUpCoor={parcel.pickUpCoor}
+            arrivedCoor={parcel.arrivedCoor}
+            pickUpPhoto={parcel.pickUpPhoto}
+            arrivedPhoto={parcel.arrivedPhoto}
+            tempThr={parcel.tempThr}
+            hmdThr={parcel.hmdThr}
+            sender={parcel.sender}
+            receiver={parcel.receiver}
+            courier={parcel.courier}
+            device={parcel.device}
+            status={parcel.status}
+            parcelTravels={parcelTravelData?.parcelTravels ? parcelTravelData.parcelTravels : []}
+          />
+        </ScrollView>
+        <View style={[styles.footer, styles.spaceBottom]}>
+          <Button
+            mode="contained"
+            onPress={onPressOrder}
+            disabled={isDisabled || parcel.arrivedPhoto === null}
+          >
+            End delivery
+          </Button>
+        </View>
+      </>
+    );
+  }
+
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+  const { hasCameraPermission } = useCameraPermission();
+
+  return (
+    <>
+      <CameraModal
+        hasCameraPermission={hasCameraPermission}
+        parcelId={parcel.id}
+        status={ParcelStatusEnum.Arrived}
+        isOpen={isCameraOpen}
+        onHideModal={() => setIsCameraOpen(false)}
+        setData={() => {}}
+      />
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={(
@@ -117,110 +211,10 @@ const Arrived = ({
           courier={parcel.courier}
           device={parcel.device}
           status={parcel.status}
-          parcelTravels={[]}
+          parcelTravels={parcelTravelData?.parcelTravels ? parcelTravelData.parcelTravels : []}
         />
-        <View style={[styles.row, styles.spaceBottom]}>
-          <Button
-            onPress={() => triggerOpenDoor({ id: parcel.id })}
-            disabled={isDisabled}
-            style={styles.rowItem}
-          >
-            Open Door
-          </Button>
-          <Button
-            mode="contained"
-            onPress={onPressOrder}
-            disabled={isDisabled}
-            style={styles.rowItem}
-          >
-            End delivery
-          </Button>
-        </View>
       </ScrollView>
-    );
-  }
-
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-
-  const { hasCameraPermission } = useCameraPermission();
-
-  return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      stickyHeaderIndices={[5]}
-      invertStickyHeaders
-      refreshControl={(
-        <RefreshControl
-          refreshing={isGetParcelLoading}
-          onRefresh={() => {
-            refetch();
-          }}
-        />
-      )}
-    >
-      <Snackbar
-        visible={!!error}
-        onDismiss={() => setError(initialError)}
-      >
-        {error}
-      </Snackbar>
-      <CameraModal
-        hasCameraPermission={hasCameraPermission}
-        parcelId={parcel.id}
-        status={ParcelStatusEnum.Arrived}
-        isOpen={isCameraOpen}
-        onHideModal={() => setIsCameraOpen(false)}
-        setData={() => {}}
-      />
-      <MapView
-        ref={(ref) => {
-          mapRef.current = ref as MapView;
-        }}
-        style={[styles.map, styles.spaceBottom]}
-        onMapReady={() => {
-          mapRef.current?.animateToRegion({
-            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
-            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.0121,
-          });
-        }}
-      >
-        <Marker
-          title="Pick Up"
-          pinColor={statusColor[ParcelStatusEnum.PickUp]}
-          coordinate={{
-            latitude: parcel.pickUpCoor!.lat,
-            longitude: parcel.pickUpCoor!.lng,
-          }}
-        />
-        <Marker
-          title="Destination"
-          pinColor={statusColor[ParcelStatusEnum.Arrived]}
-          coordinate={{
-            latitude: parcel.arrivedCoor!.lat,
-            longitude: parcel.arrivedCoor!.lng,
-          }}
-        />
-      </MapView>
-      <ParcelInfo
-        id={parcel.id}
-        name={parcel.name}
-        description={parcel.description}
-        pickUpCoor={parcel.pickUpCoor}
-        arrivedCoor={parcel.arrivedCoor}
-        pickUpPhoto={parcel.pickUpPhoto}
-        arrivedPhoto={parcel.arrivedPhoto}
-        tempThr={parcel.tempThr}
-        hmdThr={parcel.hmdThr}
-        sender={parcel.sender}
-        receiver={parcel.receiver}
-        courier={parcel.courier}
-        device={parcel.device}
-        status={parcel.status}
-        parcelTravels={[]}
-      />
-      <View style={[styles.sticky, styles.spaceBottom]}>
+      <View style={[styles.footer, styles.spaceBottom]}>
         <Button
           mode="contained-tonal"
           onPress={() => setIsCameraOpen(true)}
@@ -229,8 +223,21 @@ const Arrived = ({
         >
           Open Camera
         </Button>
+        <Button
+          onPress={() => triggerOpenDoor({ id: parcel.id })}
+          disabled={isDisabled}
+          style={styles.spaceBottom}
+        >
+          Open Door
+        </Button>
       </View>
-    </ScrollView>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(initialError)}
+      >
+        {error}
+      </Snackbar>
+    </>
   );
 };
 

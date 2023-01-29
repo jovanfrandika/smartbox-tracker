@@ -40,7 +40,6 @@ const OnGoing = ({
 
   const [code, setCode] = useState('');
   const [error, setError] = useState(initialError);
-  const { userLocation } = useGetLocation();
 
   const {
     data: parcelTravelData,
@@ -126,124 +125,117 @@ const OnGoing = ({
   }, []);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      stickyHeaderIndices={[0]}
-      invertStickyHeaders
-      refreshControl={(
-        <RefreshControl
-          refreshing={isGetParcelLoading || isGetParcelDataLoading}
-          onRefresh={() => {
-            refetch();
+    <>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={(
+          <RefreshControl
+            refreshing={isGetParcelLoading || isGetParcelDataLoading}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
+        )}
+      >
+        <MapView
+          ref={(ref) => {
+            mapRef.current = ref as MapView;
           }}
+          style={[styles.map, styles.spaceBottom]}
+          onMapReady={() => {
+            mapRef.current?.animateToRegion({
+              latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+              longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.0121,
+            });
+          }}
+        >
+          <Circle
+            center={{ latitude: parcel.arrivedCoor!.lat, longitude: parcel.arrivedCoor!.lng }}
+            radius={destRadius}
+            strokeWidth={2}
+            strokeColor={statusColor[ParcelStatusEnum.Arrived]}
+            fillColor={statusColor[ParcelStatusEnum.Arrived]}
+            style={styles.mapCircle}
+          />
+          <Marker
+            title="Pick Up"
+            pinColor={statusColor[ParcelStatusEnum.PickUp]}
+            coordinate={{
+              latitude: parcel.pickUpCoor!.lat,
+              longitude: parcel.pickUpCoor!.lng,
+            }}
+          />
+          <Marker
+            title="Destination"
+            pinColor={statusColor[ParcelStatusEnum.Arrived]}
+            coordinate={{
+              latitude: parcel.arrivedCoor!.lat,
+              longitude: parcel.arrivedCoor!.lng,
+            }}
+          />
+          {parcelTrails}
+        </MapView>
+        <ParcelInfo
+          id={parcel.id}
+          name={parcel.name}
+          description={parcel.description}
+          pickUpCoor={parcel.pickUpCoor}
+          arrivedCoor={parcel.arrivedCoor}
+          pickUpPhoto={parcel.pickUpPhoto}
+          arrivedPhoto={parcel.arrivedPhoto}
+          tempThr={parcel.tempThr}
+          hmdThr={parcel.hmdThr}
+          sender={parcel.sender}
+          receiver={parcel.receiver}
+          courier={parcel.courier}
+          device={parcel.device}
+          status={parcel.status}
+          parcelTravels={parcelTravelData?.parcelTravels ? parcelTravelData.parcelTravels : []}
         />
-      )}
-    >
+      </ScrollView>
+      <View style={styles.footer}>
+        {parcel.courier?.id === user?.id ? (
+          <>
+            {count !== countdown && hasReachEnd ? (
+              <Text style={styles.textCenter}>
+                {`Wait for ${count} second(s)`}
+              </Text>
+            ) : null}
+            <Button
+              onPress={onPressSendCode}
+              disabled={(count < countdown && count > 0) || !hasReachEnd}
+            >
+              Send Code to Receiver
+            </Button>
+          </>
+        ) : null}
+        {parcel.receiver?.id === user?.id ? (
+          <>
+            <TextInput
+              label="code"
+              keyboardType="numeric"
+              value={code}
+              onChangeText={(newCode) => setCode(newCode)}
+              style={styles.spaceBottom}
+            />
+            <Button
+              onPress={onPressVerifyCode}
+              disabled={isLoading || code.length < 6}
+            >
+              Verify Code
+            </Button>
+          </>
+        ) : null}
+      </View>
       <Snackbar
         visible={!!error}
         onDismiss={() => setError(initialError)}
       >
         {error}
       </Snackbar>
-      <MapView
-        ref={(ref) => {
-          mapRef.current = ref as MapView;
-        }}
-        style={[styles.map, styles.spaceBottom]}
-        onMapReady={() => {
-          mapRef.current?.animateToRegion({
-            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
-            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.0121,
-          });
-        }}
-      >
-        {userLocation !== null ? (
-          <Marker
-            title="Your location"
-            coordinate={{
-              latitude: userLocation.lat,
-              longitude: userLocation.lng,
-            }}
-          />
-        ) : null}
-        <Circle
-          center={{ latitude: parcel.arrivedCoor!.lat, longitude: parcel.arrivedCoor!.lng }}
-          radius={destRadius}
-          strokeWidth={2}
-          strokeColor={statusColor[ParcelStatusEnum.Arrived]}
-          fillColor={statusColor[ParcelStatusEnum.Arrived]}
-          style={styles.mapCircle}
-        />
-        <Marker
-          title="Pick Up"
-          pinColor={statusColor[ParcelStatusEnum.PickUp]}
-          coordinate={{
-            latitude: parcel.pickUpCoor!.lat,
-            longitude: parcel.pickUpCoor!.lng,
-          }}
-        />
-        <Marker
-          title="Destination"
-          pinColor={statusColor[ParcelStatusEnum.Arrived]}
-          coordinate={{
-            latitude: parcel.arrivedCoor!.lat,
-            longitude: parcel.arrivedCoor!.lng,
-          }}
-        />
-        {parcelTrails}
-      </MapView>
-      <ParcelInfo
-        id={parcel.id}
-        name={parcel.name}
-        description={parcel.description}
-        pickUpCoor={parcel.pickUpCoor}
-        arrivedCoor={parcel.arrivedCoor}
-        pickUpPhoto={parcel.pickUpPhoto}
-        arrivedPhoto={parcel.arrivedPhoto}
-        tempThr={parcel.tempThr}
-        hmdThr={parcel.hmdThr}
-        sender={parcel.sender}
-        receiver={parcel.receiver}
-        courier={parcel.courier}
-        device={parcel.device}
-        status={parcel.status}
-        parcelTravels={[]}
-      />
-      {parcel.courier?.id === user?.id ? (
-        <View>
-          {count !== countdown && hasReachEnd ? (
-            <Text style={styles.textCenter}>
-              {`Wait for ${count} second(s)`}
-            </Text>
-          ) : null}
-          <Button
-            onPress={onPressSendCode}
-            disabled={(count < countdown && count > 0) || !hasReachEnd}
-          >
-            Send Code to Receiver
-          </Button>
-        </View>
-      ) : null}
-      {parcel.receiver?.id === user?.id ? (
-        <>
-          <TextInput
-            label="code"
-            keyboardType="numeric"
-            value={code}
-            onChangeText={(newCode) => setCode(newCode)}
-            style={styles.spaceBottom}
-          />
-          <Button
-            onPress={onPressVerifyCode}
-            disabled={isLoading || code.length < 6}
-          >
-            Verify Code
-          </Button>
-        </>
-      ) : null}
-    </ScrollView>
+    </>
   );
 };
 

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import { Camera } from 'react-native-vision-camera';
 import { Button, Modal, Portal } from 'react-native-paper';
 import { Platform } from 'react-native';
 
@@ -7,6 +7,7 @@ import { useCheckPhotoMutation, useGetPhotoSignedUrlMutation } from '../../../..
 import { usePutPhotoMutation } from '../../../../services/gcp';
 import styles, { cameraSize } from './styles';
 import { ParcelStatusEnum, RawParcel } from '../../../../types';
+import useBackCamera from '../../../../hooks/useBackCamera';
 
 type Props = {
   parcelId: string;
@@ -26,7 +27,7 @@ const CameraModal = ({
   setData,
 }: Props) => {
   const cameraRef = useRef<Camera>(null);
-  const devices = useCameraDevices('wide-angle-camera');
+  const { backDevice } = useBackCamera();
 
   const [
     triggerGetPhotoSignedUrl, { isLoading: isTriggerGetPhotoSignedUrlLoading },
@@ -80,39 +81,41 @@ const CameraModal = ({
   return (
     <Portal>
       <Modal visible={isOpen} onDismiss={onDismiss}>
-        <Camera
-          ref={cameraRef}
-          style={[styles.camera, styles.spaceBottom]}
-          device={devices.back!}
-          isActive={isOpen && hasCameraPermission}
-          format={{
-            photoHeight: cameraSize,
-            photoWidth: cameraSize,
-            videoHeight: cameraSize,
-            videoWidth: cameraSize,
-            minISO: 25,
-            maxISO: 1600,
-            fieldOfView: 73.81222877530534,
-            pixelFormat: '420v',
-            supportsPhotoHDR: false,
-            supportsVideoHDR: false,
-            isHighestPhotoQualitySupported: false,
-            colorSpaces: ['raw'],
-            frameRateRanges: [
-              { maxFrameRate: 30, minFrameRate: 1 },
-              { maxFrameRate: 30, minFrameRate: 30 },
-            ],
-            autoFocusSystem: 'none',
-            maxZoom: 8,
-            videoStabilizationModes: ['off'],
-          }}
-          photo
-        />
+        {backDevice !== null ? (
+          <Camera
+            ref={cameraRef}
+            style={[styles.camera, styles.spaceBottom]}
+            device={backDevice}
+            isActive={isOpen && hasCameraPermission}
+            format={{
+              photoHeight: cameraSize,
+              photoWidth: cameraSize,
+              videoHeight: cameraSize,
+              videoWidth: cameraSize,
+              minISO: 25,
+              maxISO: 1600,
+              fieldOfView: 73.81222877530534,
+              pixelFormat: '420v',
+              supportsPhotoHDR: false,
+              supportsVideoHDR: false,
+              isHighestPhotoQualitySupported: false,
+              colorSpaces: ['raw'],
+              frameRateRanges: [
+                { maxFrameRate: 30, minFrameRate: 1 },
+                { maxFrameRate: 30, minFrameRate: 30 },
+              ],
+              autoFocusSystem: 'none',
+              maxZoom: 8,
+              videoStabilizationModes: ['off'],
+            }}
+            photo
+          />
+        ) : null}
         <Button
           mode="contained-tonal"
           onPress={onPressTakePicture}
           disabled={isLoading}
-          style={styles.spaceBottom}
+          style={[styles.cameraButton, styles.spaceBottom]}
         >
           Take Picture
         </Button>

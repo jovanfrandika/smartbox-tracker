@@ -3,7 +3,8 @@ import {
 } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import {
-  Button, Modal, Portal, Snackbar, Text,
+  Banner,
+  Button, Modal, Portal, Snackbar,
 } from 'react-native-paper';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { BarcodeFormat, useScanBarcodes } from 'vision-camera-code-scanner';
@@ -19,6 +20,7 @@ import styles from './styles';
 import useCameraPermission from '../../../hooks/useCameraPermission';
 import useInterval from '../../../hooks/useInterval';
 import ParcelInfo from '../components/ParcelInfo';
+import useBackCamera from '../../../hooks/useBackCamera';
 
 type Props = {
   parcel: Parcel,
@@ -39,7 +41,7 @@ const CameraModal = ({
   hasCameraPermission, isOpen, onHideModal, setData,
 }: CameraModalProps) => {
   const cameraRef = useRef<Camera>(null);
-  const devices = useCameraDevices('wide-angle-camera');
+  const { backDevice } = useBackCamera();
 
   const [triggerGetDevice, { isLoading }] = useLazyGetOneQuery({});
 
@@ -90,16 +92,18 @@ const CameraModal = ({
   return (
     <Portal>
       <Modal visible={isOpen} onDismiss={onDismiss}>
-        <Camera
-          ref={cameraRef}
-          style={styles.camera}
-          device={devices.back!}
-          isActive={isOpen && hasCameraPermission}
-          // format={buildCameraFormat(cameraSize)}
-          enableHighQualityPhotos={false}
-          frameProcessor={frameProcessor}
-          frameProcessorFps={1}
-        />
+        {backDevice !== null ? (
+          <Camera
+            ref={cameraRef}
+            style={styles.camera}
+            device={backDevice}
+            isActive={isOpen && hasCameraPermission}
+            // format={buildCameraFormat(cameraSize)}
+            enableHighQualityPhotos={false}
+            frameProcessor={frameProcessor}
+            frameProcessorFps={1}
+          />
+        ) : null}
       </Modal>
     </Portal>
   );
@@ -127,6 +131,12 @@ const WaitingForCourier = ({
           />
       )}
       >
+        <Banner
+          visible
+          style={styles.spaceBottom}
+        >
+          Menunggu kurir
+        </Banner>
         <ParcelInfo
           id={parcel.id}
           name={parcel.name}
@@ -144,9 +154,6 @@ const WaitingForCourier = ({
           status={parcel.status}
           parcelTravels={[]}
         />
-        <Text style={styles.textCenter}>
-          Menunggu kurir
-        </Text>
       </ScrollView>
     );
   }
@@ -232,86 +239,87 @@ const WaitingForCourier = ({
   }, [data]);
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      stickyHeaderIndices={[0]}
-      invertStickyHeaders
-      refreshControl={(
-        <RefreshControl
-          refreshing={isGetParcelLoading}
-          onRefresh={() => {
-            refetch();
-          }}
-        />
-      )}
-    >
-      <Snackbar
-        visible={!!error}
-        onDismiss={() => setError(initialError)}
-      >
-        {error}
-      </Snackbar>
+    <>
       <CameraModal
         hasCameraPermission={hasCameraPermission}
         isOpen={isOpenCamera}
         onHideModal={() => setIsOpenCamera(false)}
         setData={setData}
       />
-      <MapView
-        ref={(ref) => {
-          mapRef.current = ref as MapView;
-        }}
-        style={[styles.map, styles.spaceBottom]}
-        onMapReady={() => {
-          mapRef.current?.animateToRegion({
-            latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
-            longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.0121,
-          });
-        }}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        stickyHeaderIndices={[0]}
+        invertStickyHeaders
+        refreshControl={(
+          <RefreshControl
+            refreshing={isGetParcelLoading}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
+        )}
       >
-        <Marker
-          title="Pick Up"
-          coordinate={{
-            latitude: parcel.pickUpCoor!.lat,
-            longitude: parcel.pickUpCoor!.lng,
+        <MapView
+          ref={(ref) => {
+            mapRef.current = ref as MapView;
           }}
-        />
-        <Marker
-          title="Destination"
-          coordinate={{
-            latitude: parcel.arrivedCoor!.lat,
-            longitude: parcel.arrivedCoor!.lng,
+          style={[styles.map, styles.spaceBottom]}
+          onMapReady={() => {
+            mapRef.current?.animateToRegion({
+              latitude: (parcel.pickUpCoor!.lat + parcel.arrivedCoor!.lat) / 2,
+              longitude: (parcel.pickUpCoor!.lng + parcel.arrivedCoor!.lng) / 2,
+              latitudeDelta: 0.015,
+              longitudeDelta: 0.0121,
+            });
           }}
+        >
+          <Marker
+            title="Pick Up"
+            coordinate={{
+              latitude: parcel.pickUpCoor!.lat,
+              longitude: parcel.pickUpCoor!.lng,
+            }}
+          />
+          <Marker
+            title="Destination"
+            coordinate={{
+              latitude: parcel.arrivedCoor!.lat,
+              longitude: parcel.arrivedCoor!.lng,
+            }}
+          />
+        </MapView>
+        <ParcelInfo
+          id={parcel.id}
+          name={parcel.name}
+          description={parcel.description}
+          pickUpCoor={parcel.pickUpCoor}
+          arrivedCoor={parcel.arrivedCoor}
+          pickUpPhoto={parcel.pickUpPhoto}
+          arrivedPhoto={parcel.arrivedPhoto}
+          tempThr={parcel.tempThr}
+          hmdThr={parcel.hmdThr}
+          sender={parcel.sender}
+          receiver={parcel.receiver}
+          courier={parcel.courier}
+          device={parcel.device}
+          status={parcel.status}
+          parcelTravels={[]}
         />
-      </MapView>
-      <ParcelInfo
-        id={parcel.id}
-        name={parcel.name}
-        description={parcel.description}
-        pickUpCoor={parcel.pickUpCoor}
-        arrivedCoor={parcel.arrivedCoor}
-        pickUpPhoto={parcel.pickUpPhoto}
-        arrivedPhoto={parcel.arrivedPhoto}
-        tempThr={parcel.tempThr}
-        hmdThr={parcel.hmdThr}
-        sender={parcel.sender}
-        receiver={parcel.receiver}
-        courier={parcel.courier}
-        device={parcel.device}
-        status={parcel.status}
-        parcelTravels={[]}
-      />
-      <View style={styles.row}>
+      </ScrollView>
+      <View style={[styles.footer, styles.row]}>
         <Button
+          mode="contained-tonal"
           onPress={() => setIsOpenCamera(true)}
           disabled={isLoading}
           style={styles.rowItem}
         >
           Scan Smartbox
         </Button>
+        <View
+          style={styles.rowSpace}
+        />
         <Button
+          mode="contained"
           onPress={onPressOrder}
           disabled={data.deviceId === emptyId || isLoading}
           style={styles.rowItem}
@@ -319,7 +327,13 @@ const WaitingForCourier = ({
           Order
         </Button>
       </View>
-    </ScrollView>
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError(initialError)}
+      >
+        {error}
+      </Snackbar>
+    </>
   );
 };
 

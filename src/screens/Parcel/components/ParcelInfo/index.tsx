@@ -25,7 +25,7 @@ const isDataAccurate = (thr: Threshold, data: number[]) => {
   });
 
   const invalidPercentage = (inaccurate / validDataLength) * 100;
-  return invalidPercentage >= 5;
+  return invalidPercentage < 5;
 };
 
 const ParcelInfo = ({

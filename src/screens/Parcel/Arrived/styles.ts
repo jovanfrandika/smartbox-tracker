@@ -12,8 +12,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     flexGrow: 1,
   },
-  sticky: {
-  },
   textCenter: {
     textAlign: 'center',
   },
@@ -31,6 +29,10 @@ const styles = StyleSheet.create({
   image: {
     width: Dimensions.get('screen').width - 24,
     height: cameraSize,
+  },
+  footer: {
+    paddingHorizontal: 12,
+    paddingVertical: 24,
   },
   row: {
     flexDirection: 'row',
