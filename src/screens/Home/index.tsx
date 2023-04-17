@@ -1,79 +1,158 @@
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import {
+  TouchableOpacity, View, ScrollView, RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Text, TextInput } from 'react-native-paper';
+import { Button, Text } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../types';
+import {
+  RootStackParamList,
+  Parcel,
+  UserRoleEnum,
+} from '../../types';
 
-import { screens } from '../../constants';
+import { useAppDispatch, useAppSelector } from '../../stores';
+
+import { parcelStatusEnumToString, screens, statusColor } from '../../constants';
 
 import styles from './styles';
-
-import * as appPackage from '../../../package.json';
+import { useCreateOneMutation, useGetHistoriesQuery, useLazyGetNearbyPickUpsQuery } from '../../services/parcel';
+import { setAccessToken, setRefreshToken } from '../../utils/token';
+import { setIsLogin, setUser } from '../../stores/auth';
+import useGetLocation from '../../hooks/useGetLocation';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-
-const keyboardVerticalOffset = 64;
-
-const initialBrokerUrl = 'ws://127.0.0.1:9001';
-
-const { version } = appPackage;
 
 const Home = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
-  const [deviceName, setDeviceName] = useState<string>('');
-  const [brokerUrl, setBrokerUrl] = useState<string>(initialBrokerUrl);
+  const user = useAppSelector((state) => state.auth.user);
 
-  const onPress = useCallback(() => {
-    navigation.navigate(screens.device, { deviceName, brokerUrl });
-  }, [deviceName, brokerUrl, navigation]);
+  const { userLocation } = useGetLocation();
+
+  const dispatch = useAppDispatch();
+
+  const {
+    data: historyData,
+    refetch: refetchHistories,
+    isLoading: isGetHistoriesLoading,
+  } = useGetHistoriesQuery({}, {
+    refetchOnFocus: true,
+  });
+
+  const [triggerCreateOneMutation, { isLoading: isCreateOneLoading }] = useCreateOneMutation();
+
+  const [
+    triggerGetNearbyPickUps,
+    {
+      data: nearbyPickUpsData,
+      isLoading: isGetNearbyPickUpsLoading,
+    },
+  ] = useLazyGetNearbyPickUpsQuery({});
+
+  const onPressCreateNew = useCallback(() => {
+    triggerCreateOneMutation({ senderId: user!.id }).then(() => {
+      refetchHistories();
+    });
+  }, [user]);
+
+  const onPressLogout = useCallback(async () => {
+    await setAccessToken('');
+    await setRefreshToken('');
+    dispatch(setIsLogin({ isLogin: false }));
+    dispatch(setUser({ user: null }));
+  }, []);
+
+  const onPressGoToDetail = useCallback((parcel: Parcel) => {
+    navigation.navigate(screens.parcel, { parcelId: parcel.id });
+  }, [navigation]);
+
+  useEffect(() => {
+    if (user?.role === UserRoleEnum.Courier && userLocation !== null) {
+      triggerGetNearbyPickUps({ userLoc: userLocation });
+    }
+  }, [userLocation]);
+
+  const isLoading = isGetHistoriesLoading || isGetNearbyPickUpsLoading || isCreateOneLoading;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View>
-          <Text
-            variant="displayLarge"
-            style={styles.textCenter}
-          >
-            Smartbox Demo App
-          </Text>
-          <Text style={styles.textCenter}>
-            Version
-            {' '}
-            {version}
-          </Text>
-        </View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={keyboardVerticalOffset}
-        >
-          <TextInput
-            label="Broker Url"
-            mode="outlined"
-            value={brokerUrl}
-            onChangeText={(newVal: string) => setBrokerUrl(newVal)}
-            style={styles.spaceBottom}
-          />
-          <TextInput
-            label="Device Name"
-            mode="outlined"
-            value={deviceName}
-            onChangeText={(newVal: string) => setDeviceName(newVal)}
-            style={styles.spaceBottom}
-          />
-          <Button
-            mode="contained"
-            onPress={onPress}
-            disabled={deviceName.length === 0 && brokerUrl.length === 0}
-          >
-            Try Connect
-          </Button>
-        </KeyboardAvoidingView>
+      <View style={styles.header}>
+        <Text variant="titleMedium" style={styles.headerTitle}>
+          {user?.name}
+        </Text>
+        <Button onPress={onPressLogout}>
+          Log Out
+        </Button>
       </View>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={(
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={() => {
+              refetchHistories();
+              if (user?.role === UserRoleEnum.Courier && userLocation !== null) {
+                triggerGetNearbyPickUps({ userLoc: userLocation });
+              }
+            }}
+          />
+        )}
+      >
+        {user?.role === UserRoleEnum.Courier ? (
+          <>
+            <Text variant="titleMedium" style={styles.headerTitle}>
+              Nearby Pick Ups
+            </Text>
+            {nearbyPickUpsData?.parcels && Object.entries(nearbyPickUpsData?.parcels).map(
+              ([k, v]) => (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => onPressGoToDetail(v)}
+                  disabled={isGetNearbyPickUpsLoading}
+                  style={[styles.parcelCard]}
+                >
+                  <Text>
+                    {v.name.length > 0 ? v.name : 'Nameless Parcel'}
+                  </Text>
+                  <View style={[styles.parcelStatus, { backgroundColor: statusColor[v.status] }]}>
+                    <Text>
+                      {parcelStatusEnumToString(v.status)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ),
+            )}
+          </>
+        ) : null}
+        {user?.role === UserRoleEnum.Customer ? (
+          <Button onPress={onPressCreateNew} disabled={isLoading}>
+            Create New
+          </Button>
+        ) : null}
+        <Text variant="titleMedium" style={styles.headerTitle}>
+          History
+        </Text>
+        {historyData?.histories && Object.entries(historyData.histories).map(([k, v]) => (
+          <TouchableOpacity
+            key={k}
+            onPress={() => onPressGoToDetail(v)}
+            disabled={isLoading}
+            style={[styles.parcelCard]}
+          >
+            <Text>
+              {v.name.length > 0 ? v.name : 'Nameless Parcel'}
+            </Text>
+            <View style={[styles.parcelStatus, { backgroundColor: statusColor[v.status] }]}>
+              <Text>
+                {parcelStatusEnumToString(v.status)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 };

@@ -53,7 +53,9 @@ module.exports = {
     ],
     'no-undef': 'off',
     'no-unused-vars': 'off',
-    "no-shadow": "off",
+    'no-shadow': 'off',
+    'arrow-body-style': 'off',
+    'consistent-return': 'off',
     "@typescript-eslint/no-shadow": ["error"]
   },
   settings: {

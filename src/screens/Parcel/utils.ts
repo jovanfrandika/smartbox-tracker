@@ -1,11 +1,11 @@
-import type { Position } from '../../types';
+import type { Coordinate } from '../../types';
 
 export const filterNumber = (str: string) => str.replace(/[^0-9]/g, '');
 
 // Converts numeric degrees to radians
 const toRad = (value: number) => (value * Math.PI) / 180;
 
-export const getCrowInMeters = (src: Position, centerDest: Position) => {
+export const getCrowInMeters = (src: Coordinate, centerDest: Coordinate) => {
   const earthRadiusKm = 6371;
   const dLat = toRad(centerDest.lat - src.lat);
   const dLon = toRad(centerDest.lng - src.lng);
